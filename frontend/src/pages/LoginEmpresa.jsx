@@ -2,24 +2,33 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Pickaxe, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { request } from '../services/api';
 
 export default function LoginEmpresa() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+const handleLogin = async (e) => {
     e.preventDefault();
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     const formData = new FormData(e.target);
-    const email = formData.get('email');
+    const username = formData.get('email');
     const password = formData.get('password');
 
     try {
       setLoading(true);
-      const data = await request('/login', {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${API_URL}/auth/empresa/login`, {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
+      if (!res.ok) throw new Error('Credenciales inválidas');
+
+      const data = await res.json();
 
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('role', 'user');
@@ -27,7 +36,11 @@ export default function LoginEmpresa() {
       toast.success('Sesión iniciada correctamente');
       navigate('/formulario');
     } catch (err) {
-      toast.error('Credenciales inválidas. Verifica tus datos.');
+      if (err.name === 'AbortError') {
+        toast.error('El servidor no responde. Verifica que el backend esté corriendo.');
+      } else {
+        toast.error('Credenciales inválidas. Verifica tus datos.');
+      }
     } finally {
       setLoading(false);
     }
@@ -55,7 +68,7 @@ export default function LoginEmpresa() {
           <img 
             src="/2.jpg" 
             alt="SEFODECO" 
-            className="h-12 sm:h-16 object-contain rounded-md drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 duration-300" 
+            className="h-16 sm:h-20 w-auto object-contain rounded-md drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 duration-300" 
           />
         </div>
         

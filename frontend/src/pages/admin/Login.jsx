@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { request } from '../../services/api';
 
 export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,10 +16,21 @@ export default function AdminLogin() {
 
     try {
       setLoading(true);
-      const data = await request('/admin/login', {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${API_URL}/admin/login`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error('Credenciales inválidas');
+      }
+
+      const data = await res.json();
 
       sessionStorage.setItem('token', data.token);
       sessionStorage.setItem('role', 'admin');
@@ -55,7 +66,7 @@ export default function AdminLogin() {
           <img 
             src="/2.jpg" 
             alt="SEFODECO" 
-            className="h-12 sm:h-16 object-contain rounded-md drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 duration-300" 
+            className="h-16 sm:h-20 w-auto object-contain rounded-md drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 duration-300" 
           />
         </div>
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request } from '../services/api';
 
@@ -10,17 +10,19 @@ const STEPS = [
   { id: 1, title: 'Datos Generales' },
   { id: 2, title: 'Producción' },
   { id: 3, title: 'Métricas ESG' },
-  { id: 4, title: 'Revisión' }
+  { id: 4, title: 'Impacto Social' },
+  { id: 5, title: 'Capacitación y Rotación' }, 
+  { id: 6, title: 'Revisión' }
 ];
 
 const BACKGROUNDS = {
   1: '/bg-tunel.jpg',
   2: '/bg-produccion.jpg',
   3: '/bg-esg.jpg',
-  4: '/bg-revision.jpg'
+  4: '/bg-social.jpg',
+  5: '/bg-capacitacion.jpg',
+  6: '/bg-revision.jpg'
 };
-
-const YEARS = ['2021', '2022', '2023', '2024', '2025', '2026'];
 
 const METALS = [
   { key: 'oro', label: 'Oro', unit: 'oz' },
@@ -30,26 +32,57 @@ const METALS = [
   { key: 'zinc', label: 'Zinc', unit: 't' },
 ];
 
+// Constantes Paso 3: ESG
+const YEARS_ESG = ['2023', '2024', '2025', '2026'];
 const ESG_METRICS = [
-  { id: 'consumo-agua', label: 'Consumo de Agua', unit: 'm³ anuales' },
-  { id: 'co2', label: 'Emisiones CO2', unit: 'Ton. equivalentes' },
-  { id: 'energia', label: 'Energía', unit: 'MWh' },
-  { id: 'accidentes', label: 'Accidentes', unit: 'Incidentes' },
-  { id: 'inversion-social', label: 'Inversión Social', unit: 'Pesos (MXN)' },
-  { id: 'plantas', label: 'Reforestación', unit: 'Árboles plantados' }
+  { id: 'incidentes', label: 'Incidentes Ambientales', fullTitle: 'Número de incidentes ambientales notificables.', unit: 'Casos' },
+  { id: 'cumplimiento', label: 'Cumplimiento Normativo', fullTitle: 'Porcentaje de cumplimiento de regulaciones ambientales.', unit: '%' },
+  { id: 'agua-reciclada', label: 'Agua Reciclada', fullTitle: 'Porcentaje de uso de agua reciclada.', unit: '%' },
+  { id: 'reduccion-gei', label: 'Reducción GEI', fullTitle: 'Porcentaje de reducción de emisiones de Gases de Efecto Invernadero (GEI).', unit: '%' },
+  { id: 'reforestacion', label: 'Reforestación', fullTitle: 'Número de árboles sembrados en campañas de reforestación.', unit: 'Árboles' },
+  { id: 'inversion', label: 'Inversión Ambiental', fullTitle: 'Monto de inversión de acciones vinculadas al medio ambiente.', unit: 'Millones de dólares' }
 ];
 
+// Constantes Paso 4: Social (Empleos)
+const YEARS_SOCIAL = ['2023', '2024', '2025', '2026'];
+const SOCIAL_CATEGORIES = [
+  { id: 'empresa', label: 'Empresa', desc: 'Personal contratado directamente por la unidad minera.' },
+  { id: 'contratistas', label: 'Contratistas', desc: 'Personal subcontratado prestando servicios en la unidad.' },
+  { id: 'comunidades', label: 'Comunidades', desc: 'Empleos generados para habitantes de comunidades locales.' },
+  { id: 'guerrero', label: 'Guerrero', desc: 'Empleos generados para habitantes del Estado de Guerrero.' }
+];
+
+// Constantes Paso 5: Capacitación y Rotación
+const YEARS_CAPACITACION = ['2023', '2024', '2025', '2026'];
+const CAPACITACION_TABS = [
+  { id: 'capacitacion', label: 'Capacitación en Seguridad', desc: 'Registro de horas o personal capacitado en materia de seguridad.' },
+  { id: 'rotacion', label: 'Tasa de Rotación de Personal', desc: 'Porcentajes o métricas de rotación general y por género.' }
+];
+
+// Defaults para react-hook-form
 const ESG_DEFAULTS = Object.fromEntries(
   ESG_METRICS.map(m => [
     m.id,
-    Object.fromEntries([...YEARS.map(y => [y, '']), ['comentarios', '']])
+    Object.fromEntries([...YEARS_ESG.map(y => [y, '']), ['comentarios', '']])
   ])
 );
 
+const SOCIAL_DEFAULTS = Object.fromEntries(
+  SOCIAL_CATEGORIES.map(cat => [
+    cat.id,
+    Object.fromEntries(YEARS_SOCIAL.map(y => [y, { mujeres: '', hombres: '' }]))
+  ])
+);
+
+const CAPACITACION_DEFAULTS = {
+  capacitacion: Object.fromEntries(YEARS_CAPACITACION.map(y => [y, { mujeres: '', hombres: '' }])),
+  rotacion: Object.fromEntries(YEARS_CAPACITACION.slice(0, 3).map(y => [y, { mujeres: '', hombres: '' }]))
+};
+
 const HELP_TEXTS = {
-  empresaMatriz: 'Nombre del grupo corporativo o empresa matriz a la que pertenece la unidad minera.',
+  empresaMatriz: 'Nombre del grupo corporativo o en su caso, nombre de la empresa cuando no haya matriz.',
   subsidiaria: 'Razón social o nombre legal de la empresa subsidiaria.',
-  unidadMinera: 'Nombre oficial de la unidad minera o del complejo minero.',
+  unidadMinera: 'Nombre oficial de la Unidad Minera.',
   tipoMinado: 'Método de extracción principal utilizado en la operación minera.',
   fechaInicio: 'Fecha en que iniciaron oficialmente las operaciones de la unidad.',
   vidaUtil: 'Estimación de la vida útil restante de la mina, expresada en años.',
@@ -59,14 +92,15 @@ const HELP_TEXTS = {
   cobre: 'Volumen de cobre producido en toneladas (t).',
   plomo: 'Volumen de plomo producido en toneladas (t).',
   zinc: 'Volumen de zinc producido en toneladas (t).',
-  'consumo-agua': 'Volumen total de agua consumida en metros cúbicos (m³) anuales, incluyendo recirculación.',
-  co2: 'Emisiones totales de CO₂ equivalente generadas por la operación en el año.',
-  energia: 'Consumo total de energía expresado en megawatts-hora (MWh).',
-  accidentes: 'Número total de incidentes y accidentes laborales reportados en el año.',
-  'inversion-social': 'Monto total invertido en programas y proyectos de desarrollo social comunitario.',
-  plantas: 'Número total de árboles plantados en programas de reforestación y restauración.',
+  'incidentes': 'Reporte de eventos que causaron impacto ambiental y debieron notificarse a las autoridades.',
+  'cumplimiento': 'Porcentaje general de acatamiento a las normas ambientales vigentes.',
+  'agua-reciclada': 'Proporción de agua reutilizada respecto al consumo total hídrico.',
+  'reduccion-gei': 'Disminución porcentual de emisiones de gases de efecto invernadero respecto al año base.',
+  'reforestacion': 'Conteo total de especies arbóreas plantadas con fines de restauración ecológica.',
+  'inversion': 'Capital total destinado a proyectos, mitigación y mejoras ambientales en millones de USD.'
 };
 
+// Componente Tooltip / Ayuda
 function HelpBtn({ text }) {
   const [open, setOpen] = useState(false);
   return (
@@ -75,12 +109,13 @@ function HelpBtn({ text }) {
         type="button"
         onClick={() => setOpen(!open)}
         onBlur={() => setOpen(false)}
+        aria-label="Ver más información"
         className="w-4 h-4 rounded-full bg-zinc-200 text-zinc-500 text-[10px] font-bold flex items-center justify-center hover:bg-guinda hover:text-white transition-colors ml-1.5 flex-shrink-0"
       >
         ?
       </button>
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-zinc-900 text-white text-xs leading-relaxed rounded-lg shadow-lg z-50">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-zinc-900 text-white text-xs leading-relaxed rounded-lg shadow-lg z-50 animate-in fade-in zoom-in-95 duration-200">
           {text}
           <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-900" />
         </div>
@@ -92,16 +127,24 @@ function HelpBtn({ text }) {
 export default function Formulario() {
   const [currentStep, setCurrentStep] = useState(1);
   const [activeEsgTab, setActiveEsgTab] = useState(ESG_METRICS[0].id);
+  const [activeSocialTab, setActiveSocialTab] = useState(SOCIAL_CATEGORIES[0].id);
+  const [activeCapacitacionTab, setActiveCapacitacionTab] = useState(CAPACITACION_TABS[0].id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const [privacidadOpen, setPrivacidadOpen] = useState(false);
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
-  
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { produccion: {}, esg: ESG_DEFAULTS }
+
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: { 
+      produccion: {}, 
+      esg: ESG_DEFAULTS, 
+      social: SOCIAL_DEFAULTS,
+      capacitacionData: CAPACITACION_DEFAULTS
+    }
   });
 
   const onSubmitForm = async (data) => {
+    // Navegación interna por pestañas antes de avanzar de paso principal
     if (currentStep === 3) {
       const esgIndex = ESG_METRICS.findIndex(m => m.id === activeEsgTab);
       if (esgIndex < ESG_METRICS.length - 1) {
@@ -109,10 +152,26 @@ export default function Formulario() {
         return;
       }
     }
+    if (currentStep === 4) {
+      const rowIndex = SOCIAL_CATEGORIES.findIndex(m => m.id === activeSocialTab);
+      if (rowIndex < SOCIAL_CATEGORIES.length - 1) {
+        setActiveSocialTab(SOCIAL_CATEGORIES[rowIndex + 1].id);
+        return;
+      }
+    }
+    if (currentStep === 5) {
+      const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
+      if (capIndex < CAPACITACION_TABS.length - 1) {
+        setActiveCapacitacionTab(CAPACITACION_TABS[capIndex + 1].id);
+        return;
+      }
+    }
+
     if (currentStep < STEPS.length) {
       setCurrentStep(prev => prev + 1);
       return;
     }
+
     try {
       setIsSubmitting(true);
       await request('/formularios', { method: 'POST', body: JSON.stringify(data) });
@@ -124,20 +183,45 @@ export default function Formulario() {
     }
   };
 
+  const handlePrevious = () => {
+    if (currentStep === 3) {
+      const esgIndex = ESG_METRICS.findIndex(m => m.id === activeEsgTab);
+      if (esgIndex > 0) {
+        setActiveEsgTab(ESG_METRICS[esgIndex - 1].id);
+        return;
+      }
+    }
+    if (currentStep === 4) {
+      const rowIndex = SOCIAL_CATEGORIES.findIndex(m => m.id === activeSocialTab);
+      if (rowIndex > 0) {
+        setActiveSocialTab(SOCIAL_CATEGORIES[rowIndex - 1].id);
+        return;
+      }
+    }
+    if (currentStep === 5) {
+      const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
+      if (capIndex > 0) {
+        setActiveCapacitacionTab(CAPACITACION_TABS[capIndex - 1].id);
+        return;
+      }
+    }
+    setCurrentStep(prev => prev - 1);
+  };
+
   return (
     <main className="relative h-screen flex flex-col selection:bg-guinda selection:text-white transition-colors duration-500">
       
-      {/* 1. CAPA DE FONDO DINÁMICA (Crossfade) */}
+      {/* CAPA DE FONDO DINÁMICA */}
       <div 
         key={currentStep} 
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat animate-in fade-in duration-1000"
-        style={{ backgroundImage: `url('${BACKGROUNDS[currentStep] || BACKGROUNDS[1]}')` }} 
+        style={{ backgroundImage: `url('${BACKGROUNDS[currentStep] || BACKGROUNDS[1]}')` }}
       />
       
-      {/* 2. OVERLAY DE CONTRASTE */}
+      {/* OVERLAY DE CONTRASTE */}
       <div className="fixed inset-0 z-10 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-700" />
 
-      {/* 3. CONTENEDOR PRINCIPAL FLOTANTE */}
+      {/* CONTENEDOR PRINCIPAL FLOTANTE */}
       <div className="relative z-20 max-w-5xl mx-auto w-full flex-1 flex flex-col px-4 sm:px-6 py-4 sm:py-6 min-h-0">
         
         {/* Cabecera General */}
@@ -146,16 +230,16 @@ export default function Formulario() {
             Reporte Estadístico Minero
           </h1>
           <p className="text-zinc-300 mt-1 font-light tracking-wide drop-shadow-sm text-sm sm:text-base">
-            Completa la información correspondiente al periodo 2021-2026
+            Completa la información correspondiente al periodo evaluado
           </p>
         </div>
 
-        {/* Tarjeta Glass/Sólida */}
+        {/* Tarjeta Glass / Sólida */}
         <div className="bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/20 flex-1 flex flex-col overflow-hidden min-h-0">
           
           {/* Stepper Superior */}
           <div className="bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-200 px-4 sm:px-8 py-8 overflow-x-auto transition-colors">
-            <div className="flex items-center justify-between relative min-w-[500px]">
+            <div className="flex items-center justify-between relative min-w-[700px]">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-zinc-200 z-0"></div>
               {STEPS.map((step) => {
                 const isActive = currentStep === step.id;
@@ -184,7 +268,7 @@ export default function Formulario() {
             <div className="flex-1 overflow-y-auto px-6 sm:px-10 py-6 sm:py-8">
               
               {/* ========================================================
-                  PASO 1: DATOS GENERALES (100% COMPLETO)
+                  PASO 1: DATOS GENERALES
               ======================================================== */}
               {currentStep === 1 && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -194,10 +278,29 @@ export default function Formulario() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Empresa Matriz <HelpBtn text={HELP_TEXTS.empresaMatriz} /></label>
-                      <input {...register("empresaMatriz")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. Grupo México S.A.B. de C.V." />
+                    <div className="md:col-span-2 space-y-2 relative group">
+                      <label htmlFor="empresaMatriz" className="text-sm font-medium text-zinc-700 flex items-center justify-between">
+                        <span>Empresa Matriz o Empresa <HelpBtn text={HELP_TEXTS.empresaMatriz} /></span>
+                        <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">Requerido</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-guinda transition-colors duration-200" aria-hidden="true" />
+                        <input 
+                          id="empresaMatriz"
+                          {...register('empresaMatriz', { required: 'El nombre de la empresa es obligatorio' })}
+                          type="text" 
+                          placeholder="Ej. Mining Inc."
+                          aria-invalid={errors.empresaMatriz ? "true" : "false"}
+                          className={`w-full h-12 pl-10 pr-4 bg-white rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200 text-zinc-900 placeholder:text-zinc-400 shadow-sm ${errors.empresaMatriz ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 bg-red-50/30' : 'border-zinc-300 focus:ring-guinda/20 focus:border-guinda hover:border-zinc-400'}`}
+                        />
+                      </div>
+                      {errors.empresaMatriz && (
+                        <p role="alert" className="text-xs text-red-500 font-medium flex items-center gap-1.5 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-200">
+                          <AlertCircle className="w-3.5 h-3.5" /> {errors.empresaMatriz.message}
+                        </p>
+                      )}
                     </div>
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Subsidiaria <HelpBtn text={HELP_TEXTS.subsidiaria} /></label>
                       <input {...register("subsidiaria")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. Minera del Norte S.A." />
@@ -224,7 +327,7 @@ export default function Formulario() {
                       <input type="number" min="0" {...register("vidaUtil")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. 20" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Capacidad Instalada (ton/día) <HelpBtn text={HELP_TEXTS.capacidad} /></label>
+                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Capacidad del Procesamiento (t/día) <HelpBtn text={HELP_TEXTS.capacidad} /></label>
                       <input type="number" min="0" {...register("capacidad")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. 8000" />
                     </div>
                   </div>
@@ -232,14 +335,14 @@ export default function Formulario() {
               )}
 
               {/* ========================================================
-                  PASO 2: MATRIZ DE PRODUCCIÓN (100% COMPLETO)
+                  PASO 2: MATRIZ DE PRODUCCIÓN
               ======================================================== */}
               {currentStep === 2 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Matriz de Producción</h2>
-                      <p className="text-sm text-zinc-500 mt-1">Captura el volumen total extraído por año.</p>
+                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Producción</h2>
+                      <p className="text-sm text-zinc-500 mt-1">Volumen total extraído por año.</p>
                     </div>
                     <div className="text-xs font-medium text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 shadow-sm">
                       Deja en blanco si el metal no aplica
@@ -263,7 +366,7 @@ export default function Formulario() {
                         </tr>
                       </thead>
                       <tbody>
-                        {YEARS.map((year) => (
+                        {YEARS_ESG.map((year) => (
                           <tr key={year} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50 transition-colors group">
                             <td className="px-6 py-0 border-r border-zinc-200 font-medium text-zinc-900 bg-white group-hover:bg-zinc-50/80 sticky left-0 z-10 transition-colors">
                               {year}
@@ -290,22 +393,21 @@ export default function Formulario() {
               )}
 
               {/* ========================================================
-                  PASO 3: INDICADORES ESG (100% COMPLETO)
+                  PASO 3: INDICADORES ESG
               ======================================================== */}
               {currentStep === 3 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">3. Indicadores Ambientales y Sociales (ESG)</h2>
-                      <p className="text-sm text-zinc-500 mt-1">Registra las métricas por categoría. Puedes usar el campo de comentarios para justificar variaciones.</p>
+                      <p className="text-sm text-zinc-500 mt-1">Registra las métricas por categoría correspondientes al periodo evaluado.</p>
                     </div>
-                    <div className="text-xs font-medium text-blue-800 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-800 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 shadow-sm flex-shrink-0">
                       Selecciona una categoría
                     </div>
                   </div>
 
                   <div className="flex flex-col md:flex-row gap-8 mt-6">
-                    {/* Menú de Pestañas Verticales (Tabs) */}
                     <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
                       {ESG_METRICS.map(metric => {
                         const isActive = activeEsgTab === metric.id;
@@ -314,8 +416,10 @@ export default function Formulario() {
                             key={metric.id}
                             type="button"
                             onClick={() => setActiveEsgTab(metric.id)}
-                            className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
-                              isActive ? 'bg-zinc-900 text-white shadow-md' : 'bg-transparent text-zinc-600 hover:bg-zinc-50'
+                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
+                              isActive 
+                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
+                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
                             }`}
                           >
                             {metric.label}
@@ -324,42 +428,47 @@ export default function Formulario() {
                       })}
                     </div>
 
-                    {/* Área de Captura de la Pestaña Activa */}
-                    <div className="w-full md:w-2/3 min-h-[350px]">
+                    <div className="w-full md:w-2/3 min-h-[400px]">
                       {ESG_METRICS.map(metric => (
                         <div key={`content-${metric.id}`} className={activeEsgTab === metric.id ? 'block animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden'}>
                           
-                          <div className="mb-6">
-                            <h3 className="text-xl font-semibold text-zinc-900 tracking-tight inline-flex items-center">
-                              {metric.label}
-                              <HelpBtn text={HELP_TEXTS[metric.id]} />
+                          <div className="mb-8 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight flex items-start gap-2">
+                              <span className="leading-tight">{metric.fullTitle}</span>
+                              {HELP_TEXTS[metric.id] && <HelpBtn text={HELP_TEXTS[metric.id]} />}
                             </h3>
-                            <p className="text-sm text-zinc-500 font-medium mt-1">Unidad de medida: <span className="text-zinc-800">{metric.unit}</span></p>
+                            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-zinc-200 rounded-md text-xs font-medium text-zinc-600">
+                              Unidad de medida: <span className="text-zinc-900 font-bold">{metric.unit}</span>
+                            </div>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {YEARS.map(year => (
-                              <div key={`${metric.id}-${year}`} className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-500 tracking-wider uppercase ml-1">{year}</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                            {YEARS_ESG.map(year => (
+                              <div key={`${metric.id}-${year}`} className="space-y-1.5 group">
+                                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase ml-1 flex items-center justify-between">
+                                  {year} {year === '2026' && <span className="text-[10px] text-guinda">*</span>}
+                                </label>
                                 <input
                                   type="number"
                                   step="any"
                                   min="0"
                                   {...register(`esg.${metric.id}.${year}`)}
-                                  className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-300 font-medium shadow-sm"
+                                  className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300 font-medium shadow-sm hover:border-zinc-300"
                                   placeholder="0.00"
                                 />
                               </div>
                             ))}
                           </div>
 
-                          <div className="mt-6 space-y-2">
-                            <label className="text-sm font-medium text-zinc-700">Comentarios o justificaciones (Opcional)</label>
+                          <div className="mt-8 space-y-2">
+                            <label className="text-sm font-semibold text-zinc-700 tracking-tight">
+                              Describe las acciones más importantes realizadas del periodo 2022-2026
+                            </label>
                             <textarea
                               {...register(`esg.${metric.id}.comentarios`)}
-                              rows="3"
-                              className="w-full p-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400 resize-none leading-relaxed text-sm shadow-sm"
-                              placeholder={`Agrega observaciones sobre el ${metric.label.toLowerCase()} si es necesario...`}
+                              rows="4"
+                              className="w-full p-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400 resize-none leading-relaxed text-sm shadow-sm hover:border-zinc-300"
+                              placeholder="Ingresa justificaciones, observaciones o detalles sobre las métricas de este periodo..."
                             />
                           </div>
 
@@ -371,12 +480,241 @@ export default function Formulario() {
               )}
 
               {/* ========================================================
-                  PASO 4: REVISIÓN Y ENVÍO (100% COMPLETO)
+                  PASO 4: IMPACTO SOCIAL Y EMPLEO
               ======================================================== */}
               {currentStep === 4 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">4. Impacto Social y Empleo</h2>
+                      <p className="text-sm text-zinc-500 mt-1">Registra el personal femenino y masculino. El total de empleados se calculará de forma automática.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-8 mt-6">
+                    <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
+                      {SOCIAL_CATEGORIES.map(category => {
+                        const isActive = activeSocialTab === category.id;
+                        return (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => setActiveSocialTab(category.id)}
+                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
+                              isActive 
+                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
+                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
+                            }`}
+                          >
+                            {category.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="w-full md:w-2/3 min-h-[400px]">
+                      {SOCIAL_CATEGORIES.map(category => {
+                        if (activeSocialTab !== category.id) return null;
+
+                        return (
+                          <div key={`social-${category.id}`} className="animate-in fade-in slide-in-from-right-4 duration-300">
+                            
+                            <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                              <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">{category.label}</h3>
+                              <p className="text-sm text-zinc-500 mt-1">{category.desc}</p>
+                            </div>
+
+                            <div className="space-y-6">
+                              {YEARS_SOCIAL.map(year => {
+                                return (
+                                  <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
+                                    <div className="flex items-center justify-between mb-4">
+                                      <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
+                                        {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
+                                      </label>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-zinc-600">Total mujeres</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          {...register(`social.${category.id}.${year}.mujeres`)}
+                                          className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                      
+                                      <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-zinc-600">Total hombres</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          {...register(`social.${category.id}.${year}.hombres`)}
+                                          className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================================
+                  PASO 5: CAPACITACIÓN Y ROTACIÓN DE PERSONAL
+              ======================================================== */}
+              {currentStep === 5 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">5. Capacitación y Rotación de Personal</h2>
+                      <p className="text-sm text-zinc-500 mt-1">Registra las horas de capacitación en seguridad y las tasas de rotación anual.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-8 mt-6">
+                    {/* Menú Vertical Capacitación / Rotación */}
+                    <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
+                      {CAPACITACION_TABS.map(tab => {
+                        const isActive = activeCapacitacionTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveCapacitacionTab(tab.id)}
+                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
+                              isActive 
+                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
+                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Área de Captura */}
+                    <div className="w-full md:w-2/3 min-h-[400px]">
+                      
+                      {/* PESTAÑA 1: CAPACITACIÓN */}
+                      {activeCapacitacionTab === 'capacitacion' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+                          <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Capacitación en Seguridad</h3>
+                            <p className="text-sm text-zinc-500 mt-1">Horas de capacitación. El total se calcula automáticamente.</p>
+                          </div>
+
+                          <div className="space-y-6">
+                            {YEARS_CAPACITACION.map(year => {
+                              return (
+                                <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
+                                      {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
+                                    </label>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-semibold text-zinc-600">Total mujeres</label>
+                                      <input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        {...register(`capacitacionData.capacitacion.${year}.mujeres`)}
+                                        className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                        placeholder="0"
+                                      />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-semibold text-zinc-600">Total hombres</label>
+                                      <input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        {...register(`capacitacionData.capacitacion.${year}.hombres`)}
+                                        className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                        placeholder="0"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* PESTAÑA 2: TASA DE ROTACIÓN DE PERSONAL */}
+                      {activeCapacitacionTab === 'rotacion' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+                          <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Tasa de Rotación de Personal</h3>
+                            <p className="text-sm text-zinc-500 mt-1">Registra las tasas correspondientes al periodo 2023-2025.</p>
+                          </div>
+
+                          <div className="space-y-6">
+                            {['2023', '2024', '2025'].map(year => (
+                              <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
+                                <div className="flex items-center justify-between mb-4">
+                                  <label className="text-sm font-bold text-zinc-900">{year}</label>
+                                </div>
+
+                                {/* Reestructuración a 2 columnas tras eliminar Tasa Total */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Tasa mujeres (%)</label>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      max="100"
+                                      {...register(`capacitacionData.rotacion.${year}.mujeres`)}
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      placeholder="0.0%"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Tasa hombres (%)</label>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      max="100"
+                                      {...register(`capacitacionData.rotacion.${year}.hombres`)}
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      placeholder="0.0%"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================================
+                  PASO 6: REVISIÓN FINAL Y ENVÍO
+              ======================================================== */}
+              {currentStep === 6 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="border-b border-zinc-100 pb-4">
-                    <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">4. Revisión Final</h2>
+                    <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">6. Revisión Final</h2>
                     <p className="text-sm text-zinc-500 mt-1">Has completado todos los módulos. Verifica que la información esté lista para su envío oficial a SEFODECO.</p>
                   </div>
                   <div className="p-8 bg-zinc-50 border border-zinc-200 rounded-3xl text-center space-y-4 shadow-inner">
@@ -408,9 +746,9 @@ export default function Formulario() {
                   </label>
                 </div>
               )}
-            </div>{/* fin scroll-area */}
+            </div>
 
-            {/* Aviso de Privacidad */}
+            {/* Link Footer Aviso Privacidad */}
             <div className="flex-shrink-0 px-6 sm:px-10 py-3 border-t border-zinc-100">
               <button
                 type="button"
@@ -424,7 +762,7 @@ export default function Formulario() {
             {/* Modal de Aviso de Privacidad */}
             {privacidadOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/60" onClick={() => setPrivacidadOpen(false)} />
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPrivacidadOpen(false)} />
                 <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                   <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
                     <h3 className="text-lg font-semibold text-zinc-900">Aviso de Privacidad</h3>
@@ -433,23 +771,20 @@ export default function Formulario() {
                       onClick={() => setPrivacidadOpen(false)}
                       className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 flex items-center justify-center transition-colors text-sm font-bold"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                   <div className="px-6 py-4 overflow-y-auto text-sm text-zinc-600 leading-relaxed space-y-3 flex-1">
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
-                    <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.</p>
-                    <p>Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur. Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</p>
+                    <p>En cumplimiento con la Ley Federal de Protección de Datos Personales, SEFODECO informa que los datos recabados en este reporte tienen como finalidad única la integración de la estadística minera estatal.</p>
+                    <p>La información operativa, financiera y productiva proporcionada será tratada con estricta confidencialidad y se presentará públicamente únicamente mediante datos agregados y disociados, garantizando el secreto industrial y comercial de las empresas informantes.</p>
                   </div>
                   <div className="px-6 py-4 border-t border-zinc-200 flex justify-end">
                     <button
                       type="button"
                       onClick={() => setPrivacidadOpen(false)}
-                      className="px-4 py-2 bg-zinc-100 text-zinc-700 text-sm font-semibold rounded-xl hover:bg-zinc-200 transition-colors"
+                      className="px-4 py-2 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors"
                     >
-                      Cerrar
+                      Entendido, cerrar
                     </button>
                   </div>
                 </div>
@@ -457,29 +792,20 @@ export default function Formulario() {
             )}
 
             {/* Footer / Botones de Navegación Globales */}
-            <div className="flex-shrink-0 px-6 sm:px-10 py-4 border-t border-zinc-100 flex items-center justify-between">
+            <div className="flex-shrink-0 px-6 sm:px-10 py-4 border-t border-zinc-100 flex items-center justify-between bg-zinc-50/50">
               <button
                 type="button"
-                onClick={() => {
-                  if (currentStep === 3) {
-                    const esgIndex = ESG_METRICS.findIndex(m => m.id === activeEsgTab);
-                    if (esgIndex > 0) {
-                      setActiveEsgTab(ESG_METRICS[esgIndex - 1].id);
-                      return;
-                    }
-                  }
-                  setCurrentStep(prev => prev - 1);
-                }}
+                onClick={handlePrevious}
                 disabled={currentStep === 1 || isSubmitting}
-                className="flex items-center px-6 py-3 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all disabled:opacity-0 disabled:cursor-default"
+                className="flex items-center px-6 py-3 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-white border border-transparent hover:border-zinc-200 shadow-sm hover:shadow rounded-xl transition-all disabled:opacity-0 disabled:cursor-default"
               >
                 Anterior
               </button>
-
+              
               <button
                 type="submit"
                 disabled={isSubmitting || (currentStep === STEPS.length && !aceptaPrivacidad)}
-                className="flex items-center px-8 py-3.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-guinda-hover transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex items-center px-8 py-3.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {currentStep === STEPS.length ? (
                   isSubmitting ? (
@@ -490,7 +816,6 @@ export default function Formulario() {
                 )}
               </button>
             </div>
-
           </form>
         </div>
       </div>

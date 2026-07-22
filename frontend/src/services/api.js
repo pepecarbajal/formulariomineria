@@ -2,7 +2,7 @@
 
 // Arquitectura Escalable: Consumo dinámico de variables de entorno
 // Si VITE_API_URL existe, usa Render. Si falla, usa localhost como respaldo.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export async function request(path, options = {}) {
   const token = sessionStorage.getItem('token'); 

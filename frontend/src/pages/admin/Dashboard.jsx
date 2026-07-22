@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Building2, FileText, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Building2, FileText, Clock, TrendingUp, CheckCircle2, Download } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import toast from 'react-hot-toast';
-import { request } from '../../services/api';
+import { request, API_URL } from '../../services/api';
 
 const COMPANY_COLORS = [
   '#8A1538', '#C09A5B', '#2563EB', '#16A34A', '#DC2626',
@@ -13,12 +13,12 @@ const COMPANY_COLORS = [
 ];
 
 const ESG_CONFIG = [
-  { key: 'consumo-agua', label: 'Consumo de Agua', unit: 'm³' },
-  { key: 'co2', label: 'Emisiones CO₂', unit: 'Ton. eq.' },
-  { key: 'energia', label: 'Energía', unit: 'MWh' },
-  { key: 'accidentes', label: 'Accidentes', unit: 'Incidentes' },
-  { key: 'inversion-social', label: 'Inversión Social', unit: 'MXN' },
-  { key: 'plantas', label: 'Reforestación', unit: 'Árboles' },
+  { key: 'incidentes', label: 'Incidentes Ambientales', unit: 'Casos' },
+  { key: 'cumplimiento', label: 'Cumplimiento Normativo', unit: '%' },
+  { key: 'agua-reciclada', label: 'Agua Reciclada', unit: '%' },
+  { key: 'reduccion-gei', label: 'Reducción GEI', unit: '%' },
+  { key: 'reforestacion', label: 'Reforestación', unit: 'Árboles' },
+  { key: 'inversion', label: 'Inversión Ambiental', unit: 'Millones USD' },
 ];
 
 export default function AdminDashboard() {
@@ -50,6 +50,30 @@ export default function AdminDashboard() {
   }
 
   const complianceRate = stats ? Math.round((stats.completados / stats.totalUsuarios) * 100) : 0;
+
+  const handleDownloadReportes = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_URL}/formularios/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Error al exportar');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="(.+)"/);
+      link.download = match ? match[1] : `Reportes_Mineria_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Reportes descargados correctamente');
+    } catch {
+      toast.error('Error al descargar los reportes');
+    }
+  };
   const isHealthy = complianceRate >= 80;
   const companias = stats?.companias ?? [];
 
@@ -68,9 +92,19 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-      <header>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900">Dashboard General</h1>
-        <p className="text-sm text-zinc-500 mt-1">Visión estatal del sector minero y cumplimiento normativo.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900">Dashboard General</h1>
+          <p className="text-sm text-zinc-500 mt-1">Visión estatal del sector minero y cumplimiento normativo.</p>
+        </div>
+        <button
+          onClick={handleDownloadReportes}
+          className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 shrink-0"
+          title="Descargar todos los reportes en Excel"
+        >
+          <Download className="w-4 h-4" />
+          <span>Descargar Reportes</span>
+        </button>
       </header>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
