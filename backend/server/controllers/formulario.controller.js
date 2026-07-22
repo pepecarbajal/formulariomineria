@@ -18,6 +18,15 @@ export async function listar(req, res, next) {
   }
 }
 
+export async function obtenerPropio(req, res, next) {
+  try {
+    const result = await formularioService.obtenerPropio(req.usuario)
+    res.json(result || {})
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function exportar(req, res, next) {
   try {
     const { csv, filename } = await formularioService.exportarCSV()

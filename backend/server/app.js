@@ -20,6 +20,13 @@ const limiterLogin = rateLimit({
 app.use('/api/admin/login', limiterLogin)
 app.use('/api/auth/empresa/login', limiterLogin)
 
+const limiterGlobal = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxGlobal,
+  message: { error: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.' },
+})
+app.use('/api', limiterGlobal)
+
 app.use('/api', routes)
 
 app.get('/api/health', (req, res) => {

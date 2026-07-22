@@ -17,6 +17,7 @@ const config = {
   rateLimit: {
     windowMs: 15 * 60 * 1000,
     max: 10,
+    maxGlobal: 200,
   },
   bodyLimit: '1mb',
   jwtExpiresIn: '4h',

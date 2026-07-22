@@ -1,6 +1,11 @@
 import * as formularioRepo from '../repositories/formulario.repo.js'
+import { AppError } from '../middleware/errorHandler.js'
 
 export async function enviar(data, usuario) {
+  const existente = await formularioRepo.findLatestByUsername(usuario.username)
+  if (existente) {
+    throw new AppError(409, 'Esta empresa ya ha enviado su reporte. No se permite un segundo envío.')
+  }
   const id = await formularioRepo.add({
     ...data,
     username: usuario.username,
@@ -8,6 +13,11 @@ export async function enviar(data, usuario) {
     createdAt: new Date().toISOString(),
   })
   return { id }
+}
+
+export async function obtenerPropio(usuario) {
+  if (usuario.rol !== 'empresa') return null
+  return formularioRepo.findLatestByUsername(usuario.username)
 }
 
 export async function listar(usuario, queryUsername) {

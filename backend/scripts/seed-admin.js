@@ -20,8 +20,18 @@ const credentials = {
 if (!getApps().length) initializeApp({ credential: cert(credentials) })
 const db = getFirestore()
 
-const EMAIL = process.env.ADMIN_EMAIL || 'mineria.sefodeco@guerrero.gob.mx'
-const PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+const EMAIL = process.env.ADMIN_EMAIL
+const PASSWORD = process.env.ADMIN_PASSWORD
+
+if (!EMAIL) {
+  console.error('ADMIN_EMAIL no definido. Uso: ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secreto node seed-admin.js')
+  process.exit(1)
+}
+
+if (!PASSWORD || PASSWORD.length < 8) {
+  console.error('ADMIN_PASSWORD debe tener al menos 8 caracteres.')
+  process.exit(1)
+}
 
 async function main() {
   const hash = await bcrypt.hash(PASSWORD, 10)
@@ -30,7 +40,7 @@ async function main() {
     passwordHash: hash,
     createdAt: new Date().toISOString(),
   })
-  console.log(`Admin creado: ${EMAIL} / ${PASSWORD}`)
+  console.log(`Admin creado: ${EMAIL}`)
 }
 
 main().catch(console.error)

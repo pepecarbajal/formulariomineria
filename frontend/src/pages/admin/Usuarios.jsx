@@ -139,7 +139,7 @@ export default function AdminUsuarios() {
               <div className="relative group">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400 group-focus-within:text-[#8A1538] transition-colors" />
                 <input 
-                  type="text" {...register('password')} required
+                  type="password" {...register('password')} required
                   className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition-all text-sm bg-zinc-50 focus:bg-white"
                   placeholder="Generar clave segura"
                 />

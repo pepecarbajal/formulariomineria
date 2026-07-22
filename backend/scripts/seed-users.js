@@ -21,21 +21,27 @@ if (!getApps().length) initializeApp({ credential: cert(credentials) })
 const db = getFirestore()
 
 const USERS = [
-  { username: 'MINA1', empresa: 'Mina Media Luna', password: 'mina123' },
-  { username: 'MINA2', empresa: 'Minera Capela', password: 'mina123' },
-  { username: 'MINA3', empresa: 'Mina El Limón', password: 'mina123' },
+  { username: 'MINA1', empresa: 'Mina Media Luna' },
+  { username: 'MINA2', empresa: 'Minera Capela' },
+  { username: 'MINA3', empresa: 'Mina El Limón' },
 ]
+
+const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD
+if (!DEFAULT_PASSWORD || DEFAULT_PASSWORD.length < 8) {
+  console.error('SEED_USER_PASSWORD debe tener al menos 8 caracteres.')
+  process.exit(1)
+}
 
 async function main() {
   for (const u of USERS) {
-    const hash = await bcrypt.hash(u.password, 10)
+    const hash = await bcrypt.hash(DEFAULT_PASSWORD, 10)
     await db.collection('usuarios').doc(u.username).set({
       username: u.username,
       empresa: u.empresa,
       password: hash,
       createdAt: new Date().toISOString(),
     })
-    console.log(`Usuario creado: ${u.username} / ${u.empresa} / ${u.password}`)
+    console.log(`Usuario creado: ${u.username} / ${u.empresa}`)
   }
 }
 

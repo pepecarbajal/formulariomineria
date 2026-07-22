@@ -1,24 +1,26 @@
 import { z } from 'zod'
 
+const numeroValido = z.string().regex(/^\d+(\.\d+)?$/).optional().default('')
+
 const anioSchema = z.object({
-  oro: z.string().optional().default(''),
-  plata: z.string().optional().default(''),
-  cobre: z.string().optional().default(''),
-  plomo: z.string().optional().default(''),
-  zinc: z.string().optional().default(''),
+  oro: numeroValido,
+  plata: numeroValido,
+  cobre: numeroValido,
+  plomo: numeroValido,
+  zinc: numeroValido,
 })
 
 const esgConceptoSchema = z.object({
-  '2023': z.string().optional().default(''),
-  '2024': z.string().optional().default(''),
-  '2025': z.string().optional().default(''),
-  '2026': z.string().optional().default(''),
-  comentarios: z.string().optional().default(''),
+  '2023': numeroValido,
+  '2024': numeroValido,
+  '2025': numeroValido,
+  '2026': numeroValido,
+  comentarios: z.string().max(2000).optional().default(''),
 })
 
 const empleadoAnualSchema = z.object({
-  mujeres: z.string().optional().default(''),
-  hombres: z.string().optional().default(''),
+  mujeres: numeroValido,
+  hombres: numeroValido,
 })
 
 const socialCategoriaSchema = z.object({
@@ -29,13 +31,13 @@ const socialCategoriaSchema = z.object({
 })
 
 export const crearFormularioSchema = z.object({
-  empresaMatriz: z.string().optional().default(''),
-  subsidiaria: z.string().optional().default(''),
-  unidadMinera: z.string().optional().default(''),
-  tipoMinado: z.string().optional().default(''),
-  fechaInicio: z.string().optional().default(''),
-  vidaUtil: z.string().optional().default(''),
-  capacidad: z.string().optional().default(''),
+  empresaMatriz: z.string().max(300).optional().default(''),
+  subsidiaria: z.string().max(300).optional().default(''),
+  unidadMinera: z.string().max(300).optional().default(''),
+  tipoMinado: z.string().max(50).optional().default(''),
+  fechaInicio: z.string().max(20).optional().default(''),
+  vidaUtil: numeroValido,
+  capacidad: numeroValido,
   produccion: z
     .object({
       '2023': anioSchema.optional().default({}),
@@ -78,14 +80,14 @@ export const crearFormularioSchema = z.object({
         .default({}),
       rotacion: z
         .object({
-          '2023': z.object({ mujeres: z.string().optional().default(''), hombres: z.string().optional().default('') }).optional().default({}),
-          '2024': z.object({ mujeres: z.string().optional().default(''), hombres: z.string().optional().default('') }).optional().default({}),
-          '2025': z.object({ mujeres: z.string().optional().default(''), hombres: z.string().optional().default('') }).optional().default({}),
+          '2023': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
+          '2024': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
+          '2025': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
         })
         .optional()
         .default({}),
     })
     .optional()
     .default({}),
-  comentarios: z.string().optional().default(''),
+  comentarios: z.string().max(2000).optional().default(''),
 })

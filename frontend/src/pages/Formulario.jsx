@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Building2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Building2, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request } from '../services/api';
 
@@ -130,9 +130,30 @@ export default function Formulario() {
   const [activeSocialTab, setActiveSocialTab] = useState(SOCIAL_CATEGORIES[0].id);
   const [activeCapacitacionTab, setActiveCapacitacionTab] = useState(CAPACITACION_TABS[0].id);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(true);
   const navigate = useNavigate();
   const [privacidadOpen, setPrivacidadOpen] = useState(false);
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await request('/formularios/mi-formulario');
+        if (cancelled) return;
+        if (data && data.id) {
+          setReadOnly(true);
+          reset(data);
+        }
+      } catch {
+        // sin formulario previo
+      } finally {
+        if (!cancelled) setLoadingForm(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: { 
@@ -177,7 +198,14 @@ export default function Formulario() {
       await request('/formularios', { method: 'POST', body: JSON.stringify(data) });
       navigate('/ya-enviado');
     } catch (error) {
-      toast.error(error.message || 'Error al enviar el formulario');
+      if (error.message?.includes('ya ha enviado')) {
+        setReadOnly(true);
+        toast.error('Esta empresa ya había enviado su reporte.');
+        const existing = await request('/formularios/mi-formulario');
+        if (existing && existing.id) reset(existing);
+      } else {
+        toast.error(error.message || 'Error al enviar el formulario');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -266,7 +294,24 @@ export default function Formulario() {
           {/* Formulario Core */}
           <form onSubmit={handleSubmit(onSubmitForm)} className="flex-1 flex flex-col bg-white relative min-h-0">
             <div className="flex-1 overflow-y-auto px-6 sm:px-10 py-6 sm:py-8">
-              
+
+              {readOnly && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <EyeOff className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">Reporte ya enviado</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Esta empresa ya ha registrado su información. Los campos están en modo solo lectura.</p>
+                  </div>
+                </div>
+              )}
+
+              {loadingForm ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+                </div>
+              ) : (
+              <fieldset disabled={readOnly} className="border-0 p-0 m-0 min-w-0">
+
               {/* ========================================================
                   PASO 1: DATOS GENERALES
               ======================================================== */}
@@ -746,6 +791,8 @@ export default function Formulario() {
                   </label>
                 </div>
               )}
+            </fieldset>
+              )}
             </div>
 
             {/* Link Footer Aviso Privacidad */}
@@ -804,10 +851,10 @@ export default function Formulario() {
               
               <button
                 type="submit"
-                disabled={isSubmitting || (currentStep === STEPS.length && !aceptaPrivacidad)}
+                disabled={isSubmitting || readOnly || (currentStep === STEPS.length && !aceptaPrivacidad)}
                 className="flex items-center px-8 py-3.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {currentStep === STEPS.length ? (
+                {readOnly ? 'Reporte ya enviado' : currentStep === STEPS.length ? (
                   isSubmitting ? (
                     <>Enviando... <div className="ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div></>
                   ) : 'Finalizar y Enviar Reporte'

@@ -94,7 +94,6 @@ export default function AdminLogin() {
               <label htmlFor="email" className="text-sm font-medium text-zinc-200 tracking-wide">Correo</label>
               <input 
                 id="email" name="email" type="email" required 
-                defaultValue="mineria.sefodeco@guerrero.gob.mx"
                 className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
                 placeholder="ejemplo@guerrero.gob.mx"
               />
@@ -104,7 +103,6 @@ export default function AdminLogin() {
               <label htmlFor="password" className="text-sm font-medium text-zinc-200 tracking-wide">Contraseña</label>
               <input 
                 id="password" name="password" type="password" required 
-                defaultValue="admin123"
                 className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
                 placeholder="••••••••"
               />

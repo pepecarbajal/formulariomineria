@@ -20,6 +20,17 @@ export async function findByUsername(username, orderByField = 'createdAt', direc
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 }
 
+export async function findLatestByUsername(username) {
+  const snapshot = await coleccion()
+    .where('username', '==', username)
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get()
+  if (snapshot.empty) return null
+  const doc = snapshot.docs[0]
+  return { id: doc.id, ...doc.data() }
+}
+
 export async function raw() {
   const snapshot = await coleccion().get()
   return snapshot.docs.map((d) => d.data())

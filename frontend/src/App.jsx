@@ -14,22 +14,18 @@ import AdminUsuarios from './pages/admin/Usuarios';
 
 // Componente Wrapper para proteger rutas
 const PrivateRoute = ({ children, requireAdmin = false }) => {
-  return children;
-  /*const token = sessionStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   const role = sessionStorage.getItem('role');
 
-  // Si no hay token, lo mandamos al login que le corresponde
   if (!token) {
     return <Navigate to={requireAdmin ? "/admin/login" : "/"} replace />;
   }
 
-  // Si la ruta exige admin y no lo es, lo mandamos al inicio
   if (requireAdmin && role !== 'admin') {
     return <Navigate to="/" replace />;
   }
   
   return children;
-  */
 };
 
 export default function App() {
