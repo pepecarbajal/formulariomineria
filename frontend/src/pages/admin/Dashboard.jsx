@@ -118,7 +118,7 @@ export default function AdminDashboard() {
         {(['oro', 'plata', 'cobre', 'plomo', 'zinc']).map((metal) => (
           <div key={metal} className="bg-white p-4 rounded-2xl shadow-sm border border-zinc-200">
             <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{metal}</p>
-            <p className="text-2xl font-bold text-zinc-900 mt-1">{stats?.totalesMetal?.[metal]?.toLocaleString() ?? '-'}</p>
+            <p className="text-2xl font-bold text-zinc-900 mt-1">{stats?.totalesMetal?.[metal]?.toLocaleString('en-US') ?? '-'}</p>
             <p className={`text-xs font-semibold mt-0.5 ${tendenciaColor(stats?.tendencias?.[metal])}`}>
               {tendenciaLabel(stats?.tendencias?.[metal])}
             </p>
@@ -226,7 +226,7 @@ function ChartCard({ title, subtitle, data, companias, unit }) {
                   contentStyle={{ borderRadius: '12px', border: '1px solid #E4E4E7', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px' }}
                   itemStyle={{ fontSize: '13px', fontWeight: 500 }}
                   labelStyle={{ color: '#71717A', marginBottom: '4px', fontSize: '12px' }}
-                  formatter={(value, name) => [`${value?.toLocaleString() ?? '0'} ${unit}`, name]}
+                  formatter={(value, name) => [`${value?.toLocaleString('en-US') ?? '0'} ${unit}`, name]}
                 />
                 {companias.map((empresa, idx) => (
                   <Line
