@@ -2,9 +2,9 @@ import * as usuarioRepo from '../repositories/usuario.repo.js'
 import * as formularioRepo from '../repositories/formulario.repo.js'
 import { normalizarFecha } from '../utils/fecha.js'
 
-const YEARS = ['2021', '2022', '2023', '2024', '2025', '2026']
+const YEARS = ['2023', '2024', '2025', '2026']
 const METALS = ['oro', 'plata', 'cobre', 'plomo', 'zinc']
-const ESG_METRICS = ['consumo-agua', 'co2', 'energia', 'accidentes', 'inversion-social', 'plantas']
+const ESG_METRICS = ['incidentes', 'cumplimiento', 'agua-reciclada', 'reduccion-gei', 'reforestacion', 'inversion']
 
 function promediar(formularios, year, campo, subcampo = null) {
   const values = formularios
