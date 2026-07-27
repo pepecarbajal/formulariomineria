@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Building2, EyeOff } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request } from '../services/api';
 
@@ -32,7 +32,11 @@ const METALS = [
   { key: 'zinc', label: 'Zinc', unit: 't' },
 ];
 
-// Constantes Paso 3: ESG
+const UNIT_MAP = {
+  oro: ' oz', plata: ' oz', cobre: ' t', plomo: ' t', zinc: ' t',
+  incidentes: ' casos', cumplimiento: '%', 'agua-reciclada': '%', 'reduccion-gei': '%',
+  reforestacion: ' árboles', inversion: ' mdd',
+};
 const YEARS_ESG = ['2023', '2024', '2025', '2026'];
 const ESG_METRICS = [
   { id: 'incidentes', label: 'Incidentes Ambientales', fullTitle: 'Número de incidentes ambientales notificables.', unit: 'Casos' },
@@ -76,7 +80,7 @@ const SOCIAL_DEFAULTS = Object.fromEntries(
 
 const CAPACITACION_DEFAULTS = {
   capacitacion: Object.fromEntries(YEARS_CAPACITACION.map(y => [y, { mujeres: '', hombres: '' }])),
-  rotacion: Object.fromEntries(YEARS_CAPACITACION.slice(0, 3).map(y => [y, { mujeres: '', hombres: '' }]))
+  rotacion: Object.fromEntries(YEARS_CAPACITACION.slice(0, 3).map(y => [y, { total: '', mujeres: '', hombres: '' }]))
 };
 
 const HELP_TEXTS = {
@@ -126,11 +130,11 @@ function HelpBtn({ text }) {
 
 export default function Formulario() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [activeEsgTab, setActiveEsgTab] = useState(ESG_METRICS[0].id);
   const [activeSocialTab, setActiveSocialTab] = useState(SOCIAL_CATEGORIES[0].id);
   const [activeCapacitacionTab, setActiveCapacitacionTab] = useState(CAPACITACION_TABS[0].id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [formId, setFormId] = useState(null);
   const [loadingForm, setLoadingForm] = useState(true);
   const navigate = useNavigate();
   const [privacidadOpen, setPrivacidadOpen] = useState(false);
@@ -143,6 +147,7 @@ export default function Formulario() {
         const data = await request('/formularios/mi-formulario');
         if (cancelled) return;
         if (data && data.id) {
+          setFormId(data.id);
           setReadOnly(true);
           reset(data);
         }
@@ -155,7 +160,7 @@ export default function Formulario() {
     return () => { cancelled = true; };
   }, []);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, getValues, formState: { errors } } = useForm({
     defaultValues: { 
       produccion: {}, 
       esg: ESG_DEFAULTS, 
@@ -166,20 +171,6 @@ export default function Formulario() {
 
   const onSubmitForm = async (data) => {
     // Navegación interna por pestañas antes de avanzar de paso principal
-    if (currentStep === 3) {
-      const esgIndex = ESG_METRICS.findIndex(m => m.id === activeEsgTab);
-      if (esgIndex < ESG_METRICS.length - 1) {
-        setActiveEsgTab(ESG_METRICS[esgIndex + 1].id);
-        return;
-      }
-    }
-    if (currentStep === 4) {
-      const rowIndex = SOCIAL_CATEGORIES.findIndex(m => m.id === activeSocialTab);
-      if (rowIndex < SOCIAL_CATEGORIES.length - 1) {
-        setActiveSocialTab(SOCIAL_CATEGORIES[rowIndex + 1].id);
-        return;
-      }
-    }
     if (currentStep === 5) {
       const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
       if (capIndex < CAPACITACION_TABS.length - 1) {
@@ -195,7 +186,11 @@ export default function Formulario() {
 
     try {
       setIsSubmitting(true);
-      await request('/formularios', { method: 'POST', body: JSON.stringify(data) });
+      if (formId) {
+        await request(`/formularios/${formId}`, { method: 'PUT', body: JSON.stringify(data) });
+      } else {
+        await request('/formularios', { method: 'POST', body: JSON.stringify(data) });
+      }
       navigate('/ya-enviado');
     } catch (error) {
       if (error.message?.includes('ya ha enviado')) {
@@ -211,21 +206,208 @@ export default function Formulario() {
     }
   };
 
+  const handleSaveFile = () => {
+    const data = getValues();
+    const step = currentStep;
+    let csv = '';
+    let filename = '';
+
+    if (step === 1) {
+      csv = 'Campo,Valor\n' + [
+        ['Empresa Matriz', data.empresaMatriz],
+        ['Subsidiaria', data.subsidiaria],
+        ['Unidad Minera', data.unidadMinera],
+        ['Tipo de Minado', data.tipoMinado],
+        ['Fecha de Inicio', data.fechaInicio],
+        ['Vida Util (Años)', data.vidaUtil],
+        ['Capacidad (t/día)', data.capacidad],
+      ].map(r => r.map(v => `"${v || ''}"`).join(',')).join('\n');
+      filename = 'Datos_Generales.csv';
+    } else if (step === 2) {
+      const rows = [['Año', 'Oro (Oz)', 'Plata (Oz)', 'Cobre (t)', 'Plomo (t)', 'Zinc (t)']];
+      YEARS_ESG.forEach(year => {
+        const prod = data.produccion?.[year] || {};
+        rows.push([year, ...METALS.map(m => prod[m.key] ? `${prod[m.key]}${UNIT_MAP[m.key]}` : '')]);
+      });
+      csv = rows.map(r => r.join(',')).join('\n');
+      filename = 'Produccion.csv';
+    } else if (step === 3) {
+      const rows = [['Concepto', '2023', '2024', '2025', '2026', 'Acciones 2022-2026']];
+      ESG_METRICS.forEach(m => {
+        const esg = data.esg?.[m.id] || {};
+        rows.push([m.fullTitle,
+          esg['2023'] ? `${esg['2023']}${UNIT_MAP[m.id] || ''}` : '',
+          esg['2024'] ? `${esg['2024']}${UNIT_MAP[m.id] || ''}` : '',
+          esg['2025'] ? `${esg['2025']}${UNIT_MAP[m.id] || ''}` : '',
+          esg['2026'] ? `${esg['2026']}${UNIT_MAP[m.id] || ''}` : '',
+          esg.comentarios || ''
+        ]);
+      });
+      csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      filename = 'Indicadores_ESG.csv';
+    } else if (step === 4) {
+      const rows = [['Categoria', 'Año', 'Mujeres', '% Mujeres', 'Hombres', '% Hombres', 'Total']];
+      SOCIAL_CATEGORIES.forEach(cat => {
+        YEARS_SOCIAL.forEach(year => {
+          const s = data.social?.[cat.id]?.[year] || {};
+          const mujeres = Number(s.mujeres) || 0;
+          const hombres = Number(s.hombres) || 0;
+          const total = mujeres + hombres;
+          const pctM = total > 0 ? ((mujeres / total) * 100).toFixed(1) : '0.0';
+          const pctH = total > 0 ? ((hombres / total) * 100).toFixed(1) : '0.0';
+          rows.push([cat.label, year, String(mujeres), `${pctM}%`, String(hombres), `${pctH}%`, String(total)]);
+        });
+      });
+      csv = rows.map(r => r.join(',')).join('\n');
+      filename = 'Impacto_Social.csv';
+    } else if (step === 5) {
+      const rowsCap = [['Concepto', 'Año', 'Mujeres', 'Hombres']];
+      YEARS_CAPACITACION.forEach(year => {
+        const c = data.capacitacionData?.capacitacion?.[year] || {};
+        rowsCap.push(['Capacitacion en Seguridad (hrs)', year, c.mujeres ? `${c.mujeres} hrs` : '0', c.hombres ? `${c.hombres} hrs` : '0']);
+      });
+      ['2023', '2024', '2025'].forEach(year => {
+        const r = data.capacitacionData?.rotacion?.[year] || {};
+        rowsCap.push(['Tasa Rotacion Total', year, r.total ? `${r.total}%` : '0%', '']);
+        rowsCap.push(['Tasa Rotacion Mujeres', year, r.mujeres ? `${r.mujeres}%` : '0%', '']);
+        rowsCap.push(['Tasa Rotacion Hombres', year, r.hombres ? `${r.hombres}%` : '0%', '']);
+      });
+      csv = rowsCap.map(r => r.join(',')).join('\n');
+      filename = 'Capacitacion_Rotacion.csv';
+    } else {
+      return;
+    }
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Archivo guardado: ${filename}`);
+  };
+
+  const handlePrint = () => {
+    const data = getValues();
+    const step = currentStep;
+    const stepTitle = STEPS[step - 1]?.title || '';
+    let content = step === 1 ? '' : `<h2 style="font-size:18px;margin-bottom:16px;color:#8A1538;">${stepTitle}</h2>`;
+
+    if (step === 1) {
+      content += `<h2 style="font-size:20px;margin-bottom:16px;color:#333;border-bottom:2px solid #8A1538;padding-bottom:8px;">DATOS GENERALES</h2>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;width:40%;background:#fafafa;">Empresa Matriz</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.empresaMatriz || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Subsidiaria</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.subsidiaria || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Unidad Minera</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.unidadMinera || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Tipo de Minado</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.tipoMinado || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Fecha de Inicio</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.fechaInicio || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Vida Util (Años)</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.vidaUtil || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Capacidad (t/dia)</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.capacidad || ''}</td></tr>
+      </table>`;
+    } else if (step === 2) {
+      content += `<table style="width:100%;border-collapse:collapse;">
+        <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
+        ${METALS.map(m => `<th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">${m.label}</th>`).join('')}</tr>`;
+      YEARS_ESG.forEach(year => {
+        const prod = data.produccion?.[year] || {};
+        content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
+          ${METALS.map(m => `<td style="text-align:right;padding:8px;border:1px solid #ccc;">${prod[m.key] ? `${prod[m.key]}${UNIT_MAP[m.key]}` : '0'}</td>`).join('')}</tr>`;
+      });
+      content += `</table>`;
+    } else if (step === 3) {
+      content += `<table style="width:100%;border-collapse:collapse;">
+        <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Concepto</th>
+        ${YEARS_ESG.map(y => `<th style="text-align:center;padding:8px;border:1px solid #ccc;background:#f5f5f5;">${y}</th>`).join('')}
+        <th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Acciones</th></tr>`;
+      ESG_METRICS.forEach(m => {
+        const esg = data.esg?.[m.id] || {};
+        content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${m.fullTitle}</td>
+          ${YEARS_ESG.map(y => `<td style="text-align:center;padding:8px;border:1px solid #ccc;">${esg[y] ? `${esg[y]}${UNIT_MAP[m.id] || ''}` : ''}</td>`).join('')}
+          <td style="padding:8px;border:1px solid #ccc;">${esg.comentarios || ''}</td></tr>`;
+      });
+      content += `</table>`;
+    } else if (step === 4) {
+      content += `<table style="width:100%;border-collapse:collapse;">
+        <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Categoria</th>
+        <th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">% Mujeres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">% Hombres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th></tr>`;
+      SOCIAL_CATEGORIES.forEach(cat => {
+        YEARS_SOCIAL.forEach(year => {
+          const s = data.social?.[cat.id]?.[year] || {};
+          const mujeres = Number(s.mujeres) || 0;
+          const hombres = Number(s.hombres) || 0;
+          const total = mujeres + hombres;
+          const pctM = total > 0 ? ((mujeres / total) * 100).toFixed(1) : '0.0';
+          const pctH = total > 0 ? ((hombres / total) * 100).toFixed(1) : '0.0';
+          content += `<tr><td style="padding:8px;border:1px solid #ccc;">${cat.label}</td>
+            <td style="padding:8px;border:1px solid #ccc;">${year}</td>
+            <td style="text-align:right;padding:8px;border:1px solid #ccc;">${mujeres}</td>
+            <td style="text-align:right;padding:8px;border:1px solid #ccc;">${pctM}%</td>
+            <td style="text-align:right;padding:8px;border:1px solid #ccc;">${hombres}</td>
+            <td style="text-align:right;padding:8px;border:1px solid #ccc;">${pctH}%</td>
+            <td style="text-align:right;padding:8px;border:1px solid #ccc;font-weight:600;">${total}</td></tr>`;
+        });
+      });
+      content += `</table>`;
+    } else if (step === 5) {
+      content += `<h3 style="font-size:14px;margin:12px 0 8px;">Capacitacion en Seguridad (Horas)</h3>
+        <table style="width:100%;border-collapse:collapse;">
+        <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th></tr>`;
+      YEARS_CAPACITACION.forEach(year => {
+        const c = data.capacitacionData?.capacitacion?.[year] || {};
+        content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.mujeres ? `${c.mujeres} hrs` : '0'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.hombres ? `${c.hombres} hrs` : '0'}</td></tr>`;
+      });
+      content += `</table>`;
+      content += `<h3 style="font-size:14px;margin:12px 0 8px;">Tasa de Rotacion de Personal (%)</h3>
+        <table style="width:100%;border-collapse:collapse;">
+        <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th></tr>`;
+      ['2023', '2024', '2025'].forEach(year => {
+        const r = data.capacitacionData?.rotacion?.[year] || {};
+        content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.total ? `${r.total}%` : '0%'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.mujeres ? `${r.mujeres}%` : '0%'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.hombres ? `${r.hombres}%` : '0%'}</td></tr>`;
+      });
+      content += `</table>`;
+    }
+
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`
+      <html><head><title>${stepTitle}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; color: #000; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        th, td { padding: 6px 8px; border: 1px solid #999; text-align: left; font-size: 11px; }
+        th { background: #eee; font-weight: 700; }
+        h2 { color: #8A1538; margin-bottom: 12px; font-size: 16px; }
+        h3 { margin: 16px 0 8px; font-size: 13px; color: #333; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+
+      ${content}
+      <p style="text-align:center;margin-top:24px;font-size:10px;color:#999;">Generado el ${new Date().toLocaleDateString('es-MX')}</p>
+      </body></html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => printWin.print(), 300);
+  };
+
   const handlePrevious = () => {
-    if (currentStep === 3) {
-      const esgIndex = ESG_METRICS.findIndex(m => m.id === activeEsgTab);
-      if (esgIndex > 0) {
-        setActiveEsgTab(ESG_METRICS[esgIndex - 1].id);
-        return;
-      }
-    }
-    if (currentStep === 4) {
-      const rowIndex = SOCIAL_CATEGORIES.findIndex(m => m.id === activeSocialTab);
-      if (rowIndex > 0) {
-        setActiveSocialTab(SOCIAL_CATEGORIES[rowIndex - 1].id);
-        return;
-      }
-    }
     if (currentStep === 5) {
       const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
       if (capIndex > 0) {
@@ -250,18 +432,8 @@ export default function Formulario() {
       <div className="fixed inset-0 z-10 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-700" />
 
       {/* CONTENEDOR PRINCIPAL FLOTANTE */}
-      <div className="relative z-20 max-w-5xl mx-auto w-full flex-1 flex flex-col px-4 sm:px-6 py-4 sm:py-6 min-h-0">
+      <div className="relative z-20 max-w-4xl mx-auto w-full flex-1 flex flex-col px-2 sm:px-4 py-2 sm:py-4 min-h-0">
         
-        {/* Cabecera General */}
-        <div className="text-center flex-shrink-0 pb-3 sm:pb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white drop-shadow-md">
-            Reporte Estadístico Minero
-          </h1>
-          <p className="text-zinc-300 mt-1 font-light tracking-wide drop-shadow-sm text-sm sm:text-base">
-            Completa la información correspondiente al periodo evaluado
-          </p>
-        </div>
-
         {/* Tarjeta Glass / Sólida */}
         <div className="bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/20 flex-1 flex flex-col overflow-hidden min-h-0">
           
@@ -298,10 +470,17 @@ export default function Formulario() {
               {readOnly && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                   <EyeOff className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-900">Reporte ya enviado</p>
                     <p className="text-xs text-amber-700 mt-0.5">Esta empresa ya ha registrado su información. Los campos están en modo solo lectura.</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setReadOnly(false)}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-xl transition-all active:scale-95 shrink-0"
+                  >
+                    Editar
+                  </button>
                 </div>
               )}
 
@@ -445,81 +624,57 @@ export default function Formulario() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">3. Indicadores Ambientales y Sociales (ESG)</h2>
-                      <p className="text-sm text-zinc-500 mt-1">Registra las métricas por categoría correspondientes al periodo evaluado.</p>
-                    </div>
-                    <div className="text-xs font-medium text-blue-800 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 shadow-sm flex-shrink-0">
-                      Selecciona una categoría
+                      <p className="text-sm text-zinc-500 mt-1">Registra las métricas por año y describe las acciones realizadas.</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row gap-8 mt-6">
-                    <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
-                      {ESG_METRICS.map(metric => {
-                        const isActive = activeEsgTab === metric.id;
-                        return (
-                          <button
-                            key={metric.id}
-                            type="button"
-                            onClick={() => setActiveEsgTab(metric.id)}
-                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
-                              isActive 
-                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
-                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
-                            }`}
-                          >
-                            {metric.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="w-full md:w-2/3 min-h-[400px]">
-                      {ESG_METRICS.map(metric => (
-                        <div key={`content-${metric.id}`} className={activeEsgTab === metric.id ? 'block animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden'}>
-                          
-                          <div className="mb-8 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight flex items-start gap-2">
-                              <span className="leading-tight">{metric.fullTitle}</span>
-                              {HELP_TEXTS[metric.id] && <HelpBtn text={HELP_TEXTS[metric.id]} />}
-                            </h3>
-                            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-zinc-200 rounded-md text-xs font-medium text-zinc-600">
-                              Unidad de medida: <span className="text-zinc-900 font-bold">{metric.unit}</span>
-                            </div>
+                  <div className="space-y-4">
+                    {ESG_METRICS.map((metric) => {
+                      const esPorcentaje = metric.id === 'cumplimiento' || metric.id === 'agua-reciclada' || metric.id === 'reduccion-gei'
+                      const esEntero = metric.id === 'incidentes' || metric.id === 'reforestacion'
+                      const ejemplos = {
+                        incidentes: { '2023': 'Ej: 2 casos', '2024': 'Ej: 1 caso', '2025': 'Ej: 0 casos', '2026': 'Ej: 0 casos' },
+                        cumplimiento: { '2023': 'Ej: 85%', '2024': 'Ej: 90%', '2025': 'Ej: 95%', '2026': 'Ej: 98%' },
+                        'agua-reciclada': { '2023': 'Ej: 30%', '2024': 'Ej: 40%', '2025': 'Ej: 50%', '2026': 'Ej: 60%' },
+                        'reduccion-gei': { '2023': 'Ej: 10%', '2024': 'Ej: 15%', '2025': 'Ej: 20%', '2026': 'Ej: 25%' },
+                        reforestacion: { '2023': 'Ej: 500 árboles', '2024': 'Ej: 800 árboles', '2025': 'Ej: 1000 árboles', '2026': 'Ej: 1200 árboles' },
+                        inversion: { '2023': 'Ej: 1.5 mdd', '2024': 'Ej: 2.0 mdd', '2025': 'Ej: 2.5 mdd', '2026': 'Ej: 3.0 mdd' },
+                      }
+                      return (
+                        <div key={metric.id} className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                          <div className="p-4 bg-zinc-50 border-b border-zinc-100">
+                            <h3 className="text-sm font-semibold text-zinc-900">{metric.fullTitle}</h3>
+                            <span className="text-xs text-zinc-500">Unidad: {metric.unit}</span>
                           </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+                          <div className="p-4 space-y-3">
                             {YEARS_ESG.map(year => (
-                              <div key={`${metric.id}-${year}`} className="space-y-1.5 group">
-                                <label className="text-xs font-bold text-zinc-400 tracking-wider uppercase ml-1 flex items-center justify-between">
-                                  {year} {year === '2026' && <span className="text-[10px] text-guinda">*</span>}
-                                </label>
+                              <div key={year} className="flex items-center gap-3">
+                                <label className="text-xs font-medium text-zinc-600 w-16 shrink-0">{year}</label>
                                 <input
                                   type="number"
-                                  step="any"
+                                  step={esEntero ? '1' : 'any'}
                                   min="0"
+                                  max={esPorcentaje ? '100' : undefined}
+                                  onInput={esPorcentaje ? (e) => { if (Number(e.target.value) > 100) e.target.value = 100; } : undefined}
                                   {...register(`esg.${metric.id}.${year}`)}
-                                  className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300 font-medium shadow-sm hover:border-zinc-300"
-                                  placeholder="0.00"
+                                  className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-900 text-center text-sm"
+                                  placeholder={ejemplos[metric.id]?.[year] || '0'}
                                 />
                               </div>
                             ))}
+                            <div className="pt-2">
+                              <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2022-2026</label>
+                              <textarea
+                                {...register(`esg.${metric.id}.comentarios`)}
+                                rows={2}
+                                className="w-full p-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-800 placeholder:text-zinc-400 resize-none text-xs"
+                                placeholder="Ej: Se implementaron programas de reducción de emisiones y reciclaje de agua."
+                              />
+                            </div>
                           </div>
-
-                          <div className="mt-8 space-y-2">
-                            <label className="text-sm font-semibold text-zinc-700 tracking-tight">
-                              Describe las acciones más importantes realizadas del periodo 2022-2026
-                            </label>
-                            <textarea
-                              {...register(`esg.${metric.id}.comentarios`)}
-                              rows="4"
-                              className="w-full p-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400 resize-none leading-relaxed text-sm shadow-sm hover:border-zinc-300"
-                              placeholder="Ingresa justificaciones, observaciones o detalles sobre las métricas de este periodo..."
-                            />
-                          </div>
-
                         </div>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -536,80 +691,87 @@ export default function Formulario() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row gap-8 mt-6">
-                    <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
-                      {SOCIAL_CATEGORIES.map(category => {
-                        const isActive = activeSocialTab === category.id;
-                        return (
-                          <button
-                            key={category.id}
-                            type="button"
-                            onClick={() => setActiveSocialTab(category.id)}
-                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
-                              isActive 
-                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
-                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
-                            }`}
-                          >
-                            {category.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="w-full md:w-2/3 min-h-[400px]">
-                      {SOCIAL_CATEGORIES.map(category => {
-                        if (activeSocialTab !== category.id) return null;
-
-                        return (
-                          <div key={`social-${category.id}`} className="animate-in fade-in slide-in-from-right-4 duration-300">
-                            
-                            <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                              <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">{category.label}</h3>
-                              <p className="text-sm text-zinc-500 mt-1">{category.desc}</p>
-                            </div>
-
-                            <div className="space-y-6">
-                              {YEARS_SOCIAL.map(year => {
-                                return (
-                                  <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
-                                    <div className="flex items-center justify-between mb-4">
-                                      <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
-                                        {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
-                                      </label>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                      <div className="space-y-1.5">
-                                        <label className="text-xs font-semibold text-zinc-600">Total mujeres</label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          {...register(`social.${category.id}.${year}.mujeres`)}
-                                          className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                          placeholder="0"
-                                        />
-                                      </div>
-                                      
-                                      <div className="space-y-1.5">
-                                        <label className="text-xs font-semibold text-zinc-600">Total hombres</label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          {...register(`social.${category.id}.${year}.hombres`)}
-                                          className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                          placeholder="0"
-                                        />
-                                      </div>
-                                    </div>
+                  <div className="space-y-10">
+                    {SOCIAL_CATEGORIES.map(category => (
+                      <div key={`social-${category.id}`} className="animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                          <h3 className="text-sm font-bold text-zinc-900 mb-1">{category.label}</h3>
+                          <p className="text-sm text-zinc-600">{category.desc}</p>
+                        </div>
+                        <div className="space-y-6">
+                          {YEARS_SOCIAL.map(year => {
+                            const mujeres = Number(watch(`social.${category.id}.${year}.mujeres`)) || 0;
+                            const hombres = Number(watch(`social.${category.id}.${year}.hombres`)) || 0;
+                            const total = mujeres + hombres;
+                            const pctM = total > 0 ? ((mujeres / total) * 100).toFixed(1) : '0.0';
+                            const pctH = total > 0 ? ((hombres / total) * 100).toFixed(1) : '0.0';
+                            return (
+                              <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
+                                <div className="flex items-center justify-between mb-4">
+                                    <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
+                                      {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
+                                    </label>
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Mujeres</label>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="0"
+                                      onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }}
+                                      {...register(`social.${category.id}.${year}.mujeres`)}
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Hombres</label>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      min="0"
+                                      onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }}
+                                      {...register(`social.${category.id}.${year}.hombres`)}
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Total</label>
+                                    <input
+                                      type="text"
+                                      value={total > 0 ? String(total) : ''}
+                                      disabled
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 font-semibold text-sm cursor-not-allowed"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">% Mujeres</label>
+                                    <input
+                                      type="text"
+                                      value={total > 0 ? `${pctM}%` : ''}
+                                      disabled
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-sm cursor-not-allowed"
+                                    />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">% Hombres</label>
+                                    <input
+                                      type="text"
+                                      value={total > 0 ? `${pctH}%` : ''}
+                                      disabled
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-sm cursor-not-allowed"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -674,7 +836,7 @@ export default function Formulario() {
                                       <label className="text-xs font-semibold text-zinc-600">Total mujeres</label>
                                       <input
                                         type="number"
-                                        step="any"
+                                        step="1"
                                         min="0"
                                         {...register(`capacitacionData.capacitacion.${year}.mujeres`)}
                                         className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
@@ -685,7 +847,7 @@ export default function Formulario() {
                                       <label className="text-xs font-semibold text-zinc-600">Total hombres</label>
                                       <input
                                         type="number"
-                                        step="any"
+                                        step="1"
                                         min="0"
                                         {...register(`capacitacionData.capacitacion.${year}.hombres`)}
                                         className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
@@ -715,8 +877,19 @@ export default function Formulario() {
                                   <label className="text-sm font-bold text-zinc-900">{year}</label>
                                 </div>
 
-                                {/* Reestructuración a 2 columnas tras eliminar Tasa Total */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                  <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-zinc-600">Tasa total (%)</label>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      max="100"
+                                      {...register(`capacitacionData.rotacion.${year}.total`, { min: 0, max: 100 })}
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      placeholder="0.0%"
+                                    />
+                                  </div>
                                   <div className="space-y-1.5">
                                     <label className="text-xs font-semibold text-zinc-600">Tasa mujeres (%)</label>
                                     <input
@@ -724,7 +897,7 @@ export default function Formulario() {
                                       step="any"
                                       min="0"
                                       max="100"
-                                      {...register(`capacitacionData.rotacion.${year}.mujeres`)}
+                                      {...register(`capacitacionData.rotacion.${year}.mujeres`, { min: 0, max: 100 })}
                                       className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
                                       placeholder="0.0%"
                                     />
@@ -736,7 +909,7 @@ export default function Formulario() {
                                       step="any"
                                       min="0"
                                       max="100"
-                                      {...register(`capacitacionData.rotacion.${year}.hombres`)}
+                                      {...register(`capacitacionData.rotacion.${year}.hombres`, { min: 0, max: 100 })}
                                       className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
                                       placeholder="0.0%"
                                     />
@@ -839,29 +1012,51 @@ export default function Formulario() {
             )}
 
             {/* Footer / Botones de Navegación Globales */}
-            <div className="flex-shrink-0 px-6 sm:px-10 py-4 border-t border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <button
-                type="button"
-                onClick={handlePrevious}
-                disabled={currentStep === 1 || isSubmitting}
-                className="flex items-center px-6 py-3 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-white border border-transparent hover:border-zinc-200 shadow-sm hover:shadow rounded-xl transition-all disabled:opacity-0 disabled:cursor-default"
-              >
-                Anterior
-              </button>
-              
-              <button
-                type="submit"
-                disabled={isSubmitting || readOnly || (currentStep === STEPS.length && !aceptaPrivacidad)}
-                className="flex items-center px-8 py-3.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {readOnly ? 'Reporte ya enviado' : currentStep === STEPS.length ? (
-                  isSubmitting ? (
-                    <>Enviando... <div className="ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div></>
-                  ) : 'Finalizar y Enviar Reporte'
-                ) : (
-                  'Siguiente Paso'
+            <div className="flex-shrink-0 px-4 sm:px-8 py-3 border-t border-zinc-100 flex items-center justify-between bg-zinc-50/50 gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1 || isSubmitting}
+                  className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-white border border-transparent hover:border-zinc-200 shadow-sm hover:shadow rounded-xl transition-all disabled:opacity-0 disabled:cursor-default"
+                >
+                  Anterior
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {currentStep < STEPS.length && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleSaveFile}
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 rounded-xl transition-all active:scale-95"
+                    >
+                      <Download className="w-4 h-4 mr-1.5" /> Guardar Archivo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-white bg-zinc-100 hover:bg-zinc-700 border border-zinc-200 hover:border-zinc-700 rounded-xl transition-all active:scale-95"
+                    >
+                      <FileText className="w-4 h-4 mr-1.5" /> Imprimir
+                    </button>
+                  </>
                 )}
-              </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || readOnly || (currentStep === STEPS.length && !aceptaPrivacidad)}
+                  className="flex items-center px-6 py-2.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {readOnly ? 'Reporte ya enviado' : currentStep === STEPS.length ? (
+                    isSubmitting ? (
+                      <>Enviando... <div className="ml-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div></>
+                    ) : 'Finalizar y Enviar Reporte'
+                  ) : (
+                    'Siguiente Paso'
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         </div>

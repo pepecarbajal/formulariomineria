@@ -80,9 +80,9 @@ export const crearFormularioSchema = z.object({
         .default({}),
       rotacion: z
         .object({
-          '2023': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
-          '2024': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
-          '2025': z.object({ mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
+          '2023': z.object({ total: numeroValido, mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
+          '2024': z.object({ total: numeroValido, mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
+          '2025': z.object({ total: numeroValido, mujeres: numeroValido, hombres: numeroValido }).optional().default({}),
         })
         .optional()
         .default({}),

@@ -79,6 +79,7 @@ export async function exportarCSV() {
       `Capacitacion_${a}_%H`,
     ]),
     ...['2023', '2024', '2025'].flatMap(a => [
+      `Rotacion_${a}_Total`,
       `Rotacion_${a}_Mujeres`,
       `Rotacion_${a}_Hombres`,
     ]),
@@ -140,6 +141,7 @@ export async function exportarCSV() {
       ...['2023', '2024', '2025'].flatMap(a => {
         const entry = rot[a] || {}
         return [
+          entry.total || '0',
           entry.mujeres || '0',
           entry.hombres || '0',
         ]

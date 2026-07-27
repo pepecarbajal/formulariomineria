@@ -9,3 +9,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+@media print {
+  html, body { height: auto !important; overflow: visible !important; background: white !important; }
+  body > *:not(.print-area) { display: none !important; }
+  .fixed { display: none !important; }
+  .bg-zinc-950\/70 { display: none !important; }
+  .bg-zinc-50\/80 { display: none !important; }
+  button, nav, footer, .flex-shrink-0 { display: none !important; }
+  .bg-white.rounded-3xl { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  input, textarea, select { border: none !important; background: transparent !important; color: black !important; }
+  .overflow-y-auto { overflow: visible !important; }
+  [class*="animate-in"] { animation: none !important; opacity: 1 !important; transform: none !important; }
+}
