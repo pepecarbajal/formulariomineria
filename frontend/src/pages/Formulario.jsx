@@ -170,15 +170,6 @@ export default function Formulario() {
   });
 
   const onSubmitForm = async (data) => {
-    // Navegación interna por pestañas antes de avanzar de paso principal
-    if (currentStep === 5) {
-      const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
-      if (capIndex < CAPACITACION_TABS.length - 1) {
-        setActiveCapacitacionTab(CAPACITACION_TABS[capIndex + 1].id);
-        return;
-      }
-    }
-
     if (currentStep < STEPS.length) {
       setCurrentStep(prev => prev + 1);
       return;
@@ -261,18 +252,27 @@ export default function Formulario() {
       csv = rows.map(r => r.join(',')).join('\n');
       filename = 'Impacto_Social.csv';
     } else if (step === 5) {
-      const rowsCap = [['Concepto', 'Año', 'Mujeres', 'Hombres']];
+      const rowsCap = [];
+      rowsCap.push('Capacitacion en Seguridad (Horas)');
+      rowsCap.push(['Año', 'Mujeres', 'Hombres', 'Total'].join(','));
       YEARS_CAPACITACION.forEach(year => {
         const c = data.capacitacionData?.capacitacion?.[year] || {};
-        rowsCap.push(['Capacitacion en Seguridad (hrs)', year, c.mujeres ? `${c.mujeres} hrs` : '0', c.hombres ? `${c.hombres} hrs` : '0']);
+        const m = Number(c.mujeres) || 0;
+        const h = Number(c.hombres) || 0;
+        const t = m + h;
+        rowsCap.push([year, c.mujeres ? `${c.mujeres} hrs` : '0', c.hombres ? `${c.hombres} hrs` : '0', t > 0 ? `${t} hrs` : '0'].join(','));
       });
+      rowsCap.push('');
+      rowsCap.push('Tasa de Rotacion de Personal (%)');
+      rowsCap.push(['Año', 'Mujeres', 'Hombres', 'Total'].join(','));
       ['2023', '2024', '2025'].forEach(year => {
         const r = data.capacitacionData?.rotacion?.[year] || {};
-        rowsCap.push(['Tasa Rotacion Total', year, r.total ? `${r.total}%` : '0%', '']);
-        rowsCap.push(['Tasa Rotacion Mujeres', year, r.mujeres ? `${r.mujeres}%` : '0%', '']);
-        rowsCap.push(['Tasa Rotacion Hombres', year, r.hombres ? `${r.hombres}%` : '0%', '']);
+        const mRot = Number(r.mujeres) || 0;
+        const hRot = Number(r.hombres) || 0;
+        const tRot = mRot > 0 || hRot > 0 ? ((mRot + hRot) / 2).toFixed(1) : '0.0';
+        rowsCap.push([year, r.mujeres ? `${r.mujeres}%` : '0%', r.hombres ? `${r.hombres}%` : '0%', `${tRot}%`].join(','));
       });
-      csv = rowsCap.map(r => r.join(',')).join('\n');
+      csv = rowsCap.join('\n');
       filename = 'Capacitacion_Rotacion.csv';
     } else {
       return;
@@ -361,26 +361,34 @@ export default function Formulario() {
         <table style="width:100%;border-collapse:collapse;">
         <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
         <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
-        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th></tr>`;
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th></tr>`;
       YEARS_CAPACITACION.forEach(year => {
         const c = data.capacitacionData?.capacitacion?.[year] || {};
+        const m = Number(c.mujeres) || 0;
+        const h = Number(c.hombres) || 0;
+        const t = m + h;
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
           <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.mujeres ? `${c.mujeres} hrs` : '0'}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.hombres ? `${c.hombres} hrs` : '0'}</td></tr>`;
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.hombres ? `${c.hombres} hrs` : '0'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;font-weight:600;">${t > 0 ? `${t} hrs` : '0'}</td></tr>`;
       });
       content += `</table>`;
       content += `<h3 style="font-size:14px;margin:12px 0 8px;">Tasa de Rotacion de Personal (%)</h3>
         <table style="width:100%;border-collapse:collapse;">
         <tr><th style="text-align:left;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Año</th>
-        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th>
         <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
-        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th></tr>`;
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th>
+        <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th></tr>`;
       ['2023', '2024', '2025'].forEach(year => {
         const r = data.capacitacionData?.rotacion?.[year] || {};
+        const mRot = Number(r.mujeres) || 0;
+        const hRot = Number(r.hombres) || 0;
+        const tRot = mRot > 0 || hRot > 0 ? ((mRot + hRot) / 2).toFixed(1) : '0.0';
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.total ? `${r.total}%` : '0%'}</td>
           <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.mujeres ? `${r.mujeres}%` : '0%'}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.hombres ? `${r.hombres}%` : '0%'}</td></tr>`;
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.hombres ? `${r.hombres}%` : '0%'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;font-weight:600;">${tRot}%</td></tr>`;
       });
       content += `</table>`;
     }
@@ -408,13 +416,6 @@ export default function Formulario() {
   };
 
   const handlePrevious = () => {
-    if (currentStep === 5) {
-      const capIndex = CAPACITACION_TABS.findIndex(m => m.id === activeCapacitacionTab);
-      if (capIndex > 0) {
-        setActiveCapacitacionTab(CAPACITACION_TABS[capIndex - 1].id);
-        return;
-      }
-    }
     setCurrentStep(prev => prev - 1);
   };
 
@@ -563,7 +564,7 @@ export default function Formulario() {
               ======================================================== */}
               {currentStep === 2 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4 shrink-0">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Producción</h2>
                       <p className="text-sm text-zinc-500 mt-1">Volumen total extraído por año.</p>
@@ -573,45 +574,47 @@ export default function Formulario() {
                     </div>
                   </div>
 
-                  <div className="mt-6 border border-zinc-200 rounded-2xl overflow-x-auto shadow-sm">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
-                      <thead className="bg-zinc-50/80 border-b border-zinc-200 text-zinc-700">
-                        <tr>
-                          <th className="px-6 py-4 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
-                          {METALS.map(metal => (
-                            <th key={metal.key} className="px-6 py-4 font-semibold text-right border-r border-zinc-200 last:border-0 min-w-[140px]">
-                              <span className="inline-flex items-center justify-end gap-1">
-                                {metal.label}
-                                <HelpBtn text={HELP_TEXTS[metal.key]} />
-                                <span className="text-zinc-400 font-normal ml-0.5">({metal.unit})</span>
-                              </span>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {YEARS_ESG.map((year) => (
-                          <tr key={year} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50 transition-colors group">
-                            <td className="px-6 py-0 border-r border-zinc-200 font-medium text-zinc-900 bg-white group-hover:bg-zinc-50/80 sticky left-0 z-10 transition-colors">
-                              {year}
-                            </td>
+                  <div className="border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-base text-left whitespace-nowrap">
+                        <thead className="bg-zinc-50/80 border-b border-zinc-200 text-zinc-700">
+                          <tr>
+                            <th className="px-6 py-5 sm:py-6 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
                             {METALS.map(metal => (
-                              <td key={`${year}-${metal.key}`} className="p-0 border-r border-zinc-100 last:border-0 relative bg-white transition-colors">
-                                <input
-                                  type="number"
-                                  step="any"
-                                  min="0"
-                                  aria-label={`Producción de ${metal.label} en ${year}`}
-                                  {...register(`produccion.${year}.${metal.key}`)}
-                                  className="w-full h-full min-h-[60px] px-6 py-3 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 z-0 focus:z-20 relative transition-all placeholder:text-zinc-300 font-medium text-zinc-800"
-                                  placeholder="0.00"
-                                />
-                              </td>
+                              <th key={metal.key} className="px-6 py-5 sm:py-6 font-semibold text-right border-r border-zinc-200 last:border-0 min-w-[150px]">
+                                <span className="inline-flex items-center justify-end gap-1">
+                                  {metal.label}
+                                  <HelpBtn text={HELP_TEXTS[metal.key]} />
+                                  <span className="text-zinc-400 font-normal ml-0.5">({metal.unit})</span>
+                                </span>
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {YEARS_ESG.map((year) => (
+                            <tr key={year} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50 transition-colors group">
+                              <td className="px-6 py-0 border-r border-zinc-200 font-semibold text-zinc-900 bg-white group-hover:bg-zinc-50/80 sticky left-0 z-10 transition-colors text-base">
+                                <div className="min-h-[72px] sm:min-h-[80px] flex items-center">{year} {year === '2026' && <span className="text-xs text-guinda font-medium ml-1.5">(Proyectado)</span>}</div>
+                              </td>
+                              {METALS.map(metal => (
+                                <td key={`${year}-${metal.key}`} className="p-0 border-r border-zinc-100 last:border-0 relative bg-white transition-colors">
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                    aria-label={`Producción de ${metal.label} en ${year}`}
+                                    {...register(`produccion.${year}.${metal.key}`)}
+                                    className="w-full min-h-[72px] sm:min-h-[80px] px-6 py-4 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 focus:z-10 relative transition-all placeholder:text-zinc-300 font-semibold text-zinc-900 text-base sm:text-lg"
+                                    placeholder="0"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -655,7 +658,14 @@ export default function Formulario() {
                                   step={esEntero ? '1' : 'any'}
                                   min="0"
                                   max={esPorcentaje ? '100' : undefined}
-                                  onInput={esPorcentaje ? (e) => { if (Number(e.target.value) > 100) e.target.value = 100; } : undefined}
+                                  onInput={(e) => {
+                                    if (esEntero && (e.target.value.includes('.') || e.target.value.includes(','))) {
+                                      e.target.value = String(Math.floor(Number(e.target.value)) || '');
+                                    }
+                                    if (esPorcentaje && Number(e.target.value) > 100) {
+                                      e.target.value = 100;
+                                    }
+                                  }}
                                   {...register(`esg.${metric.id}.${year}`)}
                                   className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-900 text-center text-sm"
                                   placeholder={ejemplos[metric.id]?.[year] || '0'}
@@ -780,7 +790,7 @@ export default function Formulario() {
                   PASO 5: CAPACITACIÓN Y ROTACIÓN DE PERSONAL
               ======================================================== */}
               {currentStep === 5 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">5. Capacitación y Rotación de Personal</h2>
@@ -788,145 +798,84 @@ export default function Formulario() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row gap-8 mt-6">
-                    {/* Menú Vertical Capacitación / Rotación */}
-                    <div className="w-full md:w-1/3 space-y-2 border-r border-zinc-100 pr-0 md:pr-6">
-                      {CAPACITACION_TABS.map(tab => {
-                        const isActive = activeCapacitacionTab === tab.id;
+{/* CAPACITACIÓN EN SEGURIDAD */}
+                  <div className="space-y-6">
+                    <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                      <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Capacitación en Seguridad</h3>
+                      <p className="text-sm text-zinc-500 mt-1">Horas de capacitación. El total se calcula automáticamente.</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      {YEARS_CAPACITACION.map(year => {
+                        const mCap = Number(watch(`capacitacionData.capacitacion.${year}.mujeres`)) || 0;
+                        const hCap = Number(watch(`capacitacionData.capacitacion.${year}.hombres`)) || 0;
+                        const totalCap = mCap + hCap;
                         return (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => setActiveCapacitacionTab(tab.id)}
-                            className={`w-full text-left px-4 py-3.5 rounded-xl transition-all duration-200 text-sm font-medium border ${
-                              isActive 
-                                ? 'bg-zinc-900 text-white shadow-md border-zinc-900' 
-                                : 'bg-transparent text-zinc-600 hover:bg-zinc-50 border-transparent hover:border-zinc-200'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
+                          <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
+                                {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
+                              </label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Mujeres (hrs)</label>
+                                <input type="number" step="1" min="0" onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }} {...register(`capacitacionData.capacitacion.${year}.mujeres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Hombres (hrs)</label>
+                                <input type="number" step="1" min="0" onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }} {...register(`capacitacionData.capacitacion.${year}.hombres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Total (hrs)</label>
+                                <input type="text" value={totalCap > 0 ? `${totalCap} hrs` : ''} disabled className="w-full h-11 px-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 font-semibold text-sm cursor-not-allowed" />
+                              </div>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
+                  </div>
 
-                    {/* Área de Captura */}
-                    <div className="w-full md:w-2/3 min-h-[400px]">
-                      
-                      {/* PESTAÑA 1: CAPACITACIÓN */}
-                      {activeCapacitacionTab === 'capacitacion' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                          <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Capacitación en Seguridad</h3>
-                            <p className="text-sm text-zinc-500 mt-1">Horas de capacitación. El total se calcula automáticamente.</p>
-                          </div>
+                  {/* TASA DE ROTACIÓN DE PERSONAL */}
+                  <div className="space-y-6">
+                    <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                      <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Tasa de Rotación de Personal</h3>
+                      <p className="text-sm text-zinc-500 mt-1">Registra las tasas. La tasa total se calcula automáticamente.</p>
+                    </div>
 
-                          <div className="space-y-6">
-                            {YEARS_CAPACITACION.map(year => {
-                              return (
-                                <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
-                                  <div className="flex items-center justify-between mb-4">
-                                    <label className="text-sm font-bold text-zinc-900 flex items-center gap-1">
-                                      {year} {year === '2026' && <span className="text-guinda">* (Proyectado)</span>}
-                                    </label>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                      <label className="text-xs font-semibold text-zinc-600">Total mujeres</label>
-                                      <input
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        {...register(`capacitacionData.capacitacion.${year}.mujeres`)}
-                                        className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                        placeholder="0"
-                                      />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                      <label className="text-xs font-semibold text-zinc-600">Total hombres</label>
-                                      <input
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        {...register(`capacitacionData.capacitacion.${year}.hombres`)}
-                                        className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                        placeholder="0"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* PESTAÑA 2: TASA DE ROTACIÓN DE PERSONAL */}
-                      {activeCapacitacionTab === 'rotacion' && (
-                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                          <div className="mb-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                            <h3 className="text-lg font-semibold text-zinc-900 tracking-tight">Tasa de Rotación de Personal</h3>
-                            <p className="text-sm text-zinc-500 mt-1">Registra las tasas correspondientes al periodo 2023-2025.</p>
-                          </div>
-
-                          <div className="space-y-6">
-                            {['2023', '2024', '2025'].map(year => (
-                              <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors group">
-                                <div className="flex items-center justify-between mb-4">
-                                  <label className="text-sm font-bold text-zinc-900">{year}</label>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-zinc-600">Tasa total (%)</label>
-                                    <input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      max="100"
-                                      {...register(`capacitacionData.rotacion.${year}.total`, { min: 0, max: 100 })}
-                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                      placeholder="0.0%"
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-zinc-600">Tasa mujeres (%)</label>
-                                    <input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      max="100"
-                                      {...register(`capacitacionData.rotacion.${year}.mujeres`, { min: 0, max: 100 })}
-                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                      placeholder="0.0%"
-                                    />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-zinc-600">Tasa hombres (%)</label>
-                                    <input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      max="100"
-                                      {...register(`capacitacionData.rotacion.${year}.hombres`, { min: 0, max: 100 })}
-                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
-                                      placeholder="0.0%"
-                                    />
-                                  </div>
-                                </div>
+                    <div className="space-y-6">
+                      {['2023', '2024', '2025'].map(year => {
+                        const mRot = Number(watch(`capacitacionData.rotacion.${year}.mujeres`)) || 0;
+                        const hRot = Number(watch(`capacitacionData.rotacion.${year}.hombres`)) || 0;
+                        const totalRot = mRot > 0 || hRot > 0 ? ((mRot + hRot) / 2).toFixed(1) : '';
+                        return (
+                          <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="text-sm font-bold text-zinc-900">{year}</label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Mujeres (%)</label>
+                                <input type="number" step="any" min="0" max="100" onInput={(e) => { if (Number(e.target.value) > 100) e.target.value = 100; }} {...register(`capacitacionData.rotacion.${year}.mujeres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
                               </div>
-                            ))}
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Hombres (%)</label>
+                                <input type="number" step="any" min="0" max="100" onInput={(e) => { if (Number(e.target.value) > 100) e.target.value = 100; }} {...register(`capacitacionData.rotacion.${year}.hombres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-zinc-600">Total (%)</label>
+                                <input type="text" value={totalRot !== '' ? `${totalRot}%` : ''} disabled className="w-full h-11 px-4 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 font-semibold text-sm cursor-not-allowed" />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      )}
-
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* ========================================================
+                    {/* ========================================================
                   PASO 6: REVISIÓN FINAL Y ENVÍO
               ======================================================== */}
               {currentStep === 6 && (
