@@ -12,22 +12,27 @@ export async function findAll(orderByField = 'createdAt', direction = 'desc') {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 }
 
-export async function findByUsername(username, orderByField = 'createdAt', direction = 'desc') {
+export async function findByUsername(username) {
   const snapshot = await coleccion()
     .where('username', '==', username)
-    .orderBy(orderByField, direction)
     .get()
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+  const docs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+  docs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  return docs
 }
 
 export async function findLatestByUsername(username) {
-  const snapshot = await coleccion()
-    .where('username', '==', username)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
-    .get()
-  if (snapshot.empty) return null
-  const doc = snapshot.docs[0]
+  const docs = await findByUsername(username)
+  return docs.length > 0 ? docs[0] : null
+}
+
+export async function update(id, data) {
+  await coleccion().doc(id).update(data)
+}
+
+export async function findById(id) {
+  const doc = await coleccion().doc(id).get()
+  if (!doc.exists) return null
   return { id: doc.id, ...doc.data() }
 }
 

@@ -9,6 +9,15 @@ export async function enviar(req, res, next) {
   }
 }
 
+export async function actualizar(req, res, next) {
+  try {
+    const result = await formularioService.actualizar(req.params.id, req.body, req.usuario)
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function listar(req, res, next) {
   try {
     const result = await formularioService.listar(req.usuario, req.query.username)

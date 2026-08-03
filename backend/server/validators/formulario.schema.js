@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const numeroValido = z.string().regex(/^\d+(\.\d+)?$/).optional().default('')
+const numeroValido = z.string().regex(/^(\d+(\.\d+)?)?$/).optional().default('')
 
 const anioSchema = z.object({
   oro: numeroValido,

@@ -4,13 +4,36 @@ import { AppError } from '../middleware/errorHandler.js'
 export async function enviar(data, usuario) {
   const existente = await formularioRepo.findLatestByUsername(usuario.username)
   if (existente) {
-    throw new AppError(409, 'Esta empresa ya ha enviado su reporte. No se permite un segundo envío.')
+    await formularioRepo.update(existente.id, {
+      ...data,
+      username: usuario.username,
+      empresa: usuario.empresa,
+      updatedAt: new Date().toISOString(),
+    })
+    return { id: existente.id }
   }
   const id = await formularioRepo.add({
     ...data,
     username: usuario.username,
     empresa: usuario.empresa,
     createdAt: new Date().toISOString(),
+  })
+  return { id }
+}
+
+export async function actualizar(id, data, usuario) {
+  const existente = await formularioRepo.findById(id)
+  if (!existente) {
+    throw new AppError(404, 'Formulario no encontrado')
+  }
+  if (existente.username !== usuario.username) {
+    throw new AppError(403, 'No tienes permiso para modificar este formulario')
+  }
+  await formularioRepo.update(id, {
+    ...data,
+    username: usuario.username,
+    empresa: usuario.empresa,
+    updatedAt: new Date().toISOString(),
   })
   return { id }
 }

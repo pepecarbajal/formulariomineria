@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText } from 'lucide-react';
@@ -137,6 +137,7 @@ export default function Formulario() {
   const [formId, setFormId] = useState(null);
   const [loadingForm, setLoadingForm] = useState(true);
   const navigate = useNavigate();
+  const formScrollRef = useRef(null);
   const [privacidadOpen, setPrivacidadOpen] = useState(false);
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
 
@@ -160,7 +161,20 @@ export default function Formulario() {
     return () => { cancelled = true; };
   }, []);
 
-  const { register, handleSubmit, watch, getValues, formState: { errors } } = useForm({
+  useEffect(() => {
+    if (formScrollRef.current) {
+      formScrollRef.current.scrollTop = 0;
+    }
+  }, [currentStep]);
+
+  useEffect(() => {
+    Object.values(BACKGROUNDS).forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
+  const { register, handleSubmit, watch, getValues, reset, formState: { errors } } = useForm({
     defaultValues: { 
       produccion: {}, 
       esg: ESG_DEFAULTS, 
@@ -169,7 +183,16 @@ export default function Formulario() {
     }
   });
 
-  const onSubmitForm = async (data) => {
+  const socialData = watch('social');
+  const capData = watch('capacitacionData');
+
+  function fixArrays(val) {
+    if (Array.isArray(val)) return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, fixArrays(v)]));
+    if (val && typeof val === 'object') return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, fixArrays(v)]));
+    return val;
+  }
+
+  const onSubmitForm = async (rawData) => {
     if (currentStep < STEPS.length) {
       setCurrentStep(prev => prev + 1);
       return;
@@ -177,6 +200,7 @@ export default function Formulario() {
 
     try {
       setIsSubmitting(true);
+      const data = fixArrays(rawData);
       if (formId) {
         await request(`/formularios/${formId}`, { method: 'PUT', body: JSON.stringify(data) });
       } else {
@@ -420,17 +444,15 @@ export default function Formulario() {
   };
 
   return (
-    <main className="relative h-screen flex flex-col selection:bg-guinda selection:text-white transition-colors duration-500">
+    <main className="relative h-screen flex flex-col selection:bg-guinda selection:text-white">
       
       {/* CAPA DE FONDO DINÁMICA */}
-      <div 
-        key={currentStep} 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat animate-in fade-in duration-1000"
+      <div className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url('${BACKGROUNDS[currentStep] || BACKGROUNDS[1]}')` }}
       />
       
       {/* OVERLAY DE CONTRASTE */}
-      <div className="fixed inset-0 z-10 bg-zinc-950/70 backdrop-blur-sm transition-opacity duration-700" />
+      <div className="fixed inset-0 z-10 bg-zinc-950/70" />
 
       {/* CONTENEDOR PRINCIPAL FLOTANTE */}
       <div className="relative z-20 max-w-4xl mx-auto w-full flex-1 flex flex-col px-2 sm:px-4 py-2 sm:py-4 min-h-0">
@@ -439,7 +461,7 @@ export default function Formulario() {
         <div className="bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/20 flex-1 flex flex-col overflow-hidden min-h-0">
           
           {/* Stepper Superior */}
-          <div className="bg-zinc-50/80 backdrop-blur-xl border-b border-zinc-200 px-4 sm:px-8 py-8 overflow-x-auto transition-colors">
+          <div className="bg-zinc-50/50 border-b border-zinc-200 px-4 sm:px-8 py-5 overflow-x-auto">
             <div className="flex items-center justify-between relative min-w-[700px]">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-zinc-200 z-0"></div>
               {STEPS.map((step) => {
@@ -447,14 +469,14 @@ export default function Formulario() {
                 const isCompleted = currentStep > step.id;
                 return (
                   <div key={step.id} className="relative z-10 flex flex-col items-center bg-transparent px-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 text-sm font-bold ${
-                      isActive ? 'bg-guinda border-guinda text-white shadow-lg shadow-guinda/30 scale-110' : 
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-150 text-xs font-bold ${
+                      isActive ? 'bg-guinda border-guinda text-white' : 
                       isCompleted ? 'bg-white border-guinda text-guinda' : 'bg-white border-zinc-300 text-zinc-400'
                     }`}>
-                      {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : step.id}
+                      {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : step.id}
                     </div>
-                    <span className={`text-xs font-semibold mt-4 absolute -bottom-8 w-max tracking-wide transition-colors ${
-                      isActive || isCompleted ? 'text-zinc-900' : 'text-zinc-400'
+                    <span className={`text-[10px] font-semibold mt-3 absolute -bottom-7 w-max tracking-wide ${
+                      isActive || isCompleted ? 'text-zinc-700' : 'text-zinc-400'
                     }`}>
                       {step.title}
                     </span>
@@ -466,7 +488,7 @@ export default function Formulario() {
 
           {/* Formulario Core */}
           <form onSubmit={handleSubmit(onSubmitForm)} className="flex-1 flex flex-col bg-white relative min-h-0">
-            <div className="flex-1 overflow-y-auto px-6 sm:px-10 py-6 sm:py-8">
+            <div ref={formScrollRef} className="flex-1 overflow-y-auto px-6 sm:px-10 py-6 sm:py-8">
 
               {readOnly && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -477,7 +499,13 @@ export default function Formulario() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setReadOnly(false)}
+                    onClick={async () => {
+                      try {
+                        const data = await request('/formularios/mi-formulario');
+                        if (data && data.id) reset(data);
+                      } catch {}
+                      setReadOnly(false);
+                    }}
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-xl transition-all active:scale-95 shrink-0"
                   >
                     Editar
@@ -496,7 +524,7 @@ export default function Formulario() {
                   PASO 1: DATOS GENERALES
               ======================================================== */}
               {currentStep === 1 && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-200">
                   <div className="border-b border-zinc-100 pb-4">
                     <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">1. Información General</h2>
                     <p className="text-sm text-zinc-500 mt-1">Identificación de la unidad y capacidades operativas.</p>
@@ -563,7 +591,7 @@ export default function Formulario() {
                   PASO 2: MATRIZ DE PRODUCCIÓN
               ======================================================== */}
               {currentStep === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4 shrink-0">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Producción</h2>
@@ -574,14 +602,14 @@ export default function Formulario() {
                     </div>
                   </div>
 
-                  <div className="border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-base text-left whitespace-nowrap">
+                  <div className="border border-zinc-200 rounded-2xl shadow-sm">
+                    <div>
+                      <table className="w-full text-base text-left">
                         <thead className="bg-zinc-50/80 border-b border-zinc-200 text-zinc-700">
                           <tr>
-                            <th className="px-6 py-5 sm:py-6 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
+                            <th className="px-4 py-4 sm:px-5 sm:py-5 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
                             {METALS.map(metal => (
-                              <th key={metal.key} className="px-6 py-5 sm:py-6 font-semibold text-right border-r border-zinc-200 last:border-0 min-w-[150px]">
+                              <th key={metal.key} className="px-3 sm:px-4 py-4 sm:py-5 font-semibold text-right border-r border-zinc-200 last:border-0">
                                 <span className="inline-flex items-center justify-end gap-1">
                                   {metal.label}
                                   <HelpBtn text={HELP_TEXTS[metal.key]} />
@@ -594,18 +622,18 @@ export default function Formulario() {
                         <tbody>
                           {YEARS_ESG.map((year) => (
                             <tr key={year} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50 transition-colors group">
-                              <td className="px-6 py-0 border-r border-zinc-200 font-semibold text-zinc-900 bg-white group-hover:bg-zinc-50/80 sticky left-0 z-10 transition-colors text-base">
-                                <div className="min-h-[72px] sm:min-h-[80px] flex items-center">{year} {year === '2026' && <span className="text-xs text-guinda font-medium ml-1.5">(Proyectado)</span>}</div>
+                              <td className="px-4 py-0 border-r border-zinc-200 font-semibold text-zinc-900 bg-white group-hover:bg-zinc-50/80 sticky left-0 z-10 transition-colors text-sm sm:text-base">
+                                <div className="min-h-[60px] sm:min-h-[64px] flex items-center">{year}{year === '2026' && <span className="text-guinda ml-0.5">*</span>}</div>
                               </td>
                               {METALS.map(metal => (
-                                <td key={`${year}-${metal.key}`} className="p-0 border-r border-zinc-100 last:border-0 relative bg-white transition-colors">
+                                <td key={`${year}-${metal.key}`} className="p-0 border-r border-zinc-100 last:border-0 relative bg-white">
                                   <input
                                     type="number"
                                     step="any"
                                     min="0"
                                     aria-label={`Producción de ${metal.label} en ${year}`}
                                     {...register(`produccion.${year}.${metal.key}`)}
-                                    className="w-full min-h-[72px] sm:min-h-[80px] px-6 py-4 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 focus:z-10 relative transition-all placeholder:text-zinc-300 font-semibold text-zinc-900 text-base sm:text-lg"
+                                    className="w-full min-h-[60px] sm:min-h-[64px] px-3 py-3 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 focus:z-10 relative transition-all placeholder:text-zinc-300 font-semibold text-zinc-900 text-sm sm:text-base"
                                     placeholder="0"
                                   />
                                 </td>
@@ -616,6 +644,9 @@ export default function Formulario() {
                       </table>
                     </div>
                   </div>
+                  <div className="text-xs text-zinc-900">
+                    <span className="text-guinda">*</span> Proyectado
+                  </div>
                 </div>
               )}
 
@@ -623,7 +654,7 @@ export default function Formulario() {
                   PASO 3: INDICADORES ESG
               ======================================================== */}
               {currentStep === 3 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">3. Indicadores Ambientales y Sociales (ESG)</h2>
@@ -659,14 +690,20 @@ export default function Formulario() {
                                   min="0"
                                   max={esPorcentaje ? '100' : undefined}
                                   onInput={(e) => {
-                                    if (esEntero && (e.target.value.includes('.') || e.target.value.includes(','))) {
-                                      e.target.value = String(Math.floor(Number(e.target.value)) || '');
-                                    }
                                     if (esPorcentaje && Number(e.target.value) > 100) {
                                       e.target.value = 100;
                                     }
                                   }}
-                                  {...register(`esg.${metric.id}.${year}`)}
+                                  {...register(`esg.${metric.id}.${year}`, {
+                                    setValueAs: (v) => {
+                                      if (v === '' || v === undefined || v === null) return '';
+                                      const n = Number(v);
+                                      if (isNaN(n)) return '';
+                                      if (esPorcentaje) return String(Math.min(n, 100));
+                                      if (esEntero) return String(Math.floor(n));
+                                      return String(n);
+                                    }
+                                  })}
                                   className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-900 text-center text-sm"
                                   placeholder={ejemplos[metric.id]?.[year] || '0'}
                                 />
@@ -693,7 +730,7 @@ export default function Formulario() {
                   PASO 4: IMPACTO SOCIAL Y EMPLEO
               ======================================================== */}
               {currentStep === 4 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">4. Impacto Social y Empleo</h2>
@@ -710,8 +747,9 @@ export default function Formulario() {
                         </div>
                         <div className="space-y-6">
                           {YEARS_SOCIAL.map(year => {
-                            const mujeres = Number(watch(`social.${category.id}.${year}.mujeres`)) || 0;
-                            const hombres = Number(watch(`social.${category.id}.${year}.hombres`)) || 0;
+                            const yearData = socialData?.[category.id]?.[year] || {};
+                            const mujeres = Number(yearData.mujeres) || 0;
+                            const hombres = Number(yearData.hombres) || 0;
                             const total = mujeres + hombres;
                             const pctM = total > 0 ? ((mujeres / total) * 100).toFixed(1) : '0.0';
                             const pctH = total > 0 ? ((hombres / total) * 100).toFixed(1) : '0.0';
@@ -730,8 +768,9 @@ export default function Formulario() {
                                       type="number"
                                       step="1"
                                       min="0"
-                                      onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }}
-                                      {...register(`social.${category.id}.${year}.mujeres`)}
+                                      {...register(`social.${category.id}.${year}.mujeres`, {
+                                        setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '')
+                                      })}
                                       className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
                                       placeholder="0"
                                     />
@@ -742,8 +781,9 @@ export default function Formulario() {
                                       type="number"
                                       step="1"
                                       min="0"
-                                      onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }}
-                                      {...register(`social.${category.id}.${year}.hombres`)}
+                                      {...register(`social.${category.id}.${year}.hombres`, {
+                                        setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '')
+                                      })}
                                       className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
                                       placeholder="0"
                                     />
@@ -790,7 +830,7 @@ export default function Formulario() {
                   PASO 5: CAPACITACIÓN Y ROTACIÓN DE PERSONAL
               ======================================================== */}
               {currentStep === 5 && (
-                <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
                       <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">5. Capacitación y Rotación de Personal</h2>
@@ -807,8 +847,9 @@ export default function Formulario() {
 
                     <div className="space-y-6">
                       {YEARS_CAPACITACION.map(year => {
-                        const mCap = Number(watch(`capacitacionData.capacitacion.${year}.mujeres`)) || 0;
-                        const hCap = Number(watch(`capacitacionData.capacitacion.${year}.hombres`)) || 0;
+                        const capYear = capData?.capacitacion?.[year] || {};
+                        const mCap = Number(capYear.mujeres) || 0;
+                        const hCap = Number(capYear.hombres) || 0;
                         const totalCap = mCap + hCap;
                         return (
                           <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
@@ -820,11 +861,11 @@ export default function Formulario() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Mujeres (hrs)</label>
-                                <input type="number" step="1" min="0" onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }} {...register(`capacitacionData.capacitacion.${year}.mujeres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                                <input type="number" step="1" min="0" {...register(`capacitacionData.capacitacion.${year}.mujeres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Hombres (hrs)</label>
-                                <input type="number" step="1" min="0" onInput={(e) => { if (e.target.value.includes('.') || e.target.value.includes(',')) e.target.value = String(Math.floor(Number(e.target.value)) || ''); }} {...register(`capacitacionData.capacitacion.${year}.hombres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                                <input type="number" step="1" min="0" {...register(`capacitacionData.capacitacion.${year}.hombres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Total (hrs)</label>
@@ -846,8 +887,9 @@ export default function Formulario() {
 
                     <div className="space-y-6">
                       {['2023', '2024', '2025'].map(year => {
-                        const mRot = Number(watch(`capacitacionData.rotacion.${year}.mujeres`)) || 0;
-                        const hRot = Number(watch(`capacitacionData.rotacion.${year}.hombres`)) || 0;
+                        const rotYear = capData?.rotacion?.[year] || {};
+                        const mRot = Number(rotYear.mujeres) || 0;
+                        const hRot = Number(rotYear.hombres) || 0;
                         const totalRot = mRot > 0 || hRot > 0 ? ((mRot + hRot) / 2).toFixed(1) : '';
                         return (
                           <div key={year} className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
@@ -857,11 +899,11 @@ export default function Formulario() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Mujeres (%)</label>
-                                <input type="number" step="any" min="0" max="100" onInput={(e) => { if (Number(e.target.value) > 100) e.target.value = 100; }} {...register(`capacitacionData.rotacion.${year}.mujeres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
+                                <input type="number" step="any" min="0" max="100" {...register(`capacitacionData.rotacion.${year}.mujeres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Hombres (%)</label>
-                                <input type="number" step="any" min="0" max="100" onInput={(e) => { if (Number(e.target.value) > 100) e.target.value = 100; }} {...register(`capacitacionData.rotacion.${year}.hombres`)} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
+                                <input type="number" step="any" min="0" max="100" {...register(`capacitacionData.rotacion.${year}.hombres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Total (%)</label>
@@ -879,7 +921,7 @@ export default function Formulario() {
                   PASO 6: REVISIÓN FINAL Y ENVÍO
               ======================================================== */}
               {currentStep === 6 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="border-b border-zinc-100 pb-4">
                     <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">6. Revisión Final</h2>
                     <p className="text-sm text-zinc-500 mt-1">Has completado todos los módulos. Verifica que la información esté lista para su envío oficial a SEFODECO.</p>

@@ -7,6 +7,7 @@ import * as formularioController from '../controllers/formulario.controller.js'
 const router = Router()
 
 router.post('/', verificarToken, soloEmpresa, validar(crearFormularioSchema), formularioController.enviar)
+router.put('/:id', verificarToken, soloEmpresa, validar(crearFormularioSchema), formularioController.actualizar)
 router.get('/', verificarToken, formularioController.listar)
 router.get('/mi-formulario', verificarToken, soloEmpresa, formularioController.obtenerPropio)
 router.get('/export', verificarToken, soloAdmin, formularioController.exportar)
