@@ -9,8 +9,8 @@ import YaEnviado from './pages/YaEnviado';
 // Páginas de Admin
 import AdminLogin from './pages/admin/Login';
 import AdminLayout from './components/layout/AdminLayout';
-import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsuarios from './pages/admin/Usuarios';
+import AdminFormularios from './pages/admin/Formularios';
 
 // Componente Wrapper para proteger rutas
 const PrivateRoute = ({ children, requireAdmin = false }) => {
@@ -71,18 +71,18 @@ export default function App() {
           
           <Route element={<AdminLayout />}>
             <Route 
-              path="/admin/dashboard" 
-              element={
-                <PrivateRoute requireAdmin={true}>
-                  <AdminDashboard />
-                </PrivateRoute>
-              } 
-            />
-            <Route 
               path="/admin/usuarios" 
               element={
                 <PrivateRoute requireAdmin={true}>
                   <AdminUsuarios />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/admin/formularios" 
+              element={
+                <PrivateRoute requireAdmin={true}>
+                  <AdminFormularios />
                 </PrivateRoute>
               } 
             />

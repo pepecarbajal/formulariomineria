@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, Menu, X, ShieldCheck } from 'lucide-react';
+import { Users, LogOut, Menu, X, ShieldCheck, FileText } from 'lucide-react';
 
 export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -13,7 +13,7 @@ export default function AdminLayout() {
   };
 
   const navLinks = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Reportes de Empresas', path: '/admin/formularios', icon: FileText },
     { name: 'Gestión de Usuarios', path: '/admin/usuarios', icon: Users },
   ];
 

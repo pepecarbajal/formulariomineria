@@ -37,7 +37,7 @@ export default function AdminLogin() {
       sessionStorage.setItem('role', 'admin');
       
       toast.success('Sesión iniciada correctamente');
-      navigate('/admin/dashboard');
+      navigate('/admin/formularios');
     } catch (err) {
       toast.error('Credenciales de administrador inválidas');
     } finally {

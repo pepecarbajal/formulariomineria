@@ -38,13 +38,13 @@ export async function obtenerPropio(req, res, next) {
 
 export async function exportar(req, res, next) {
   try {
-    const { csv, filename } = await formularioService.exportarCSV()
-    if (!csv) {
+    const { buffer, filename } = await formularioService.exportarExcel()
+    if (!buffer) {
       return res.status(404).json({ error: 'No hay datos para exportar' })
     }
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
-    res.status(200).send('\uFEFF' + csv)
+    res.status(200).send(Buffer.from(buffer))
   } catch (err) {
     next(err)
   }

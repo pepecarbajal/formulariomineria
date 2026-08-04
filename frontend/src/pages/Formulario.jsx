@@ -4,105 +4,24 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request } from '../services/api';
-
-// --- CONFIGURACIÓN Y CONSTANTES ARQUITECTÓNICAS ---
-const STEPS = [
-  { id: 1, title: 'Datos Generales' },
-  { id: 2, title: 'Producción' },
-  { id: 3, title: 'Métricas ESG' },
-  { id: 4, title: 'Impacto Social' },
-  { id: 5, title: 'Capacitación y Rotación' }, 
-  { id: 6, title: 'Revisión' }
-];
-
-const BACKGROUNDS = {
-  1: '/bg-tunel.jpg',
-  2: '/bg-produccion.jpg',
-  3: '/bg-esg.jpg',
-  4: '/bg-social.jpg',
-  5: '/bg-capacitacion.jpg',
-  6: '/bg-revision.jpg'
-};
-
-const METALS = [
-  { key: 'oro', label: 'Oro', unit: 'oz' },
-  { key: 'plata', label: 'Plata', unit: 'oz' },
-  { key: 'cobre', label: 'Cobre', unit: 't' },
-  { key: 'plomo', label: 'Plomo', unit: 't' },
-  { key: 'zinc', label: 'Zinc', unit: 't' },
-];
-
-const UNIT_MAP = {
-  oro: ' oz', plata: ' oz', cobre: ' t', plomo: ' t', zinc: ' t',
-  incidentes: ' casos', cumplimiento: '%', 'agua-reciclada': '%', 'reduccion-gei': '%',
-  reforestacion: ' árboles', inversion: ' mdd',
-};
-const YEARS_ESG = ['2023', '2024', '2025', '2026'];
-const ESG_METRICS = [
-  { id: 'incidentes', label: 'Incidentes Ambientales', fullTitle: 'Número de incidentes ambientales notificables.', unit: 'Casos' },
-  { id: 'cumplimiento', label: 'Cumplimiento Normativo', fullTitle: 'Porcentaje de cumplimiento de regulaciones ambientales.', unit: '%' },
-  { id: 'agua-reciclada', label: 'Agua Reciclada', fullTitle: 'Porcentaje de uso de agua reciclada.', unit: '%' },
-  { id: 'reduccion-gei', label: 'Reducción GEI', fullTitle: 'Porcentaje de reducción de emisiones de Gases de Efecto Invernadero (GEI).', unit: '%' },
-  { id: 'reforestacion', label: 'Reforestación', fullTitle: 'Número de árboles sembrados en campañas de reforestación.', unit: 'Árboles' },
-  { id: 'inversion', label: 'Inversión Ambiental', fullTitle: 'Monto de inversión de acciones vinculadas al medio ambiente.', unit: 'Millones de dólares' }
-];
-
-// Constantes Paso 4: Social (Empleos)
-const YEARS_SOCIAL = ['2023', '2024', '2025', '2026'];
-const SOCIAL_CATEGORIES = [
-  { id: 'empresa', label: 'Empresa', desc: 'Personal contratado directamente por la unidad minera.' },
-  { id: 'contratistas', label: 'Contratistas', desc: 'Personal subcontratado prestando servicios en la unidad.' },
-  { id: 'comunidades', label: 'Comunidades', desc: 'Empleos generados para habitantes de comunidades locales.' },
-  { id: 'guerrero', label: 'Guerrero', desc: 'Empleos generados para habitantes del Estado de Guerrero.' }
-];
-
-// Constantes Paso 5: Capacitación y Rotación
-const YEARS_CAPACITACION = ['2023', '2024', '2025', '2026'];
-const CAPACITACION_TABS = [
-  { id: 'capacitacion', label: 'Capacitación en Seguridad', desc: 'Registro de horas o personal capacitado en materia de seguridad.' },
-  { id: 'rotacion', label: 'Tasa de Rotación de Personal', desc: 'Porcentajes o métricas de rotación general y por género.' }
-];
-
-// Defaults para react-hook-form
-const ESG_DEFAULTS = Object.fromEntries(
-  ESG_METRICS.map(m => [
-    m.id,
-    Object.fromEntries([...YEARS_ESG.map(y => [y, '']), ['comentarios', '']])
-  ])
-);
-
-const SOCIAL_DEFAULTS = Object.fromEntries(
-  SOCIAL_CATEGORIES.map(cat => [
-    cat.id,
-    Object.fromEntries(YEARS_SOCIAL.map(y => [y, { mujeres: '', hombres: '' }]))
-  ])
-);
-
-const CAPACITACION_DEFAULTS = {
-  capacitacion: Object.fromEntries(YEARS_CAPACITACION.map(y => [y, { mujeres: '', hombres: '' }])),
-  rotacion: Object.fromEntries(YEARS_CAPACITACION.slice(0, 3).map(y => [y, { total: '', mujeres: '', hombres: '' }]))
-};
-
-const HELP_TEXTS = {
-  empresaMatriz: 'Nombre del grupo corporativo o en su caso, nombre de la empresa cuando no haya matriz.',
-  subsidiaria: 'Razón social o nombre legal de la empresa subsidiaria.',
-  unidadMinera: 'Nombre oficial de la Unidad Minera.',
-  tipoMinado: 'Método de extracción principal utilizado en la operación minera.',
-  fechaInicio: 'Fecha en que iniciaron oficialmente las operaciones de la unidad.',
-  vidaUtil: 'Estimación de la vida útil restante de la mina, expresada en años.',
-  capacidad: 'Capacidad instalada de procesamiento de mineral en toneladas por día.',
-  oro: 'Volumen de oro producido en onzas troy (oz).',
-  plata: 'Volumen de plata producido en onzas troy (oz).',
-  cobre: 'Volumen de cobre producido en toneladas (t).',
-  plomo: 'Volumen de plomo producido en toneladas (t).',
-  zinc: 'Volumen de zinc producido en toneladas (t).',
-  'incidentes': 'Reporte de eventos que causaron impacto ambiental y debieron notificarse a las autoridades.',
-  'cumplimiento': 'Porcentaje general de acatamiento a las normas ambientales vigentes.',
-  'agua-reciclada': 'Proporción de agua reutilizada respecto al consumo total hídrico.',
-  'reduccion-gei': 'Disminución porcentual de emisiones de gases de efecto invernadero respecto al año base.',
-  'reforestacion': 'Conteo total de especies arbóreas plantadas con fines de restauración ecológica.',
-  'inversion': 'Capital total destinado a proyectos, mitigación y mejoras ambientales en millones de USD.'
-};
+import {
+  STEPS,
+  BACKGROUNDS,
+  METALS,
+  UNIT_MAP,
+  YEARS_ESG,
+  ESG_METRICS,
+  YEARS_SOCIAL,
+  SOCIAL_CATEGORIES,
+  YEARS_CAPACITACION,
+  YEARS_ROTACION,
+  CAPACITACION_TABS,
+  ESG_DEFAULTS,
+  SOCIAL_DEFAULTS,
+  CAPACITACION_DEFAULTS,
+  HELP_TEXTS,
+  esPorcentajeESG,
+} from '../config/formulario';
 
 // Componente Tooltip / Ayuda
 function HelpBtn({ text }) {
@@ -289,7 +208,7 @@ export default function Formulario() {
       rowsCap.push('');
       rowsCap.push('Tasa de Rotacion de Personal (%)');
       rowsCap.push(['Año', 'Mujeres', 'Hombres', 'Total'].join(','));
-      ['2023', '2024', '2025'].forEach(year => {
+      YEARS_ROTACION.forEach(year => {
         const r = data.capacitacionData?.rotacion?.[year] || {};
         const mRot = Number(r.mujeres) || 0;
         const hRot = Number(r.hombres) || 0;
@@ -404,7 +323,7 @@ export default function Formulario() {
         <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Mujeres</th>
         <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Hombres</th>
         <th style="text-align:right;padding:8px;border:1px solid #ccc;background:#f5f5f5;">Total</th></tr>`;
-      ['2023', '2024', '2025'].forEach(year => {
+      YEARS_ROTACION.forEach(year => {
         const r = data.capacitacionData?.rotacion?.[year] || {};
         const mRot = Number(r.mujeres) || 0;
         const hRot = Number(r.hombres) || 0;
@@ -664,7 +583,7 @@ export default function Formulario() {
 
                   <div className="space-y-4">
                     {ESG_METRICS.map((metric) => {
-                      const esPorcentaje = metric.id === 'cumplimiento' || metric.id === 'agua-reciclada' || metric.id === 'reduccion-gei'
+                      const esPorcentaje = esPorcentajeESG(metric.id)
                       const esEntero = metric.id === 'incidentes' || metric.id === 'reforestacion'
                       const ejemplos = {
                         incidentes: { '2023': 'Ej: 2 casos', '2024': 'Ej: 1 caso', '2025': 'Ej: 0 casos', '2026': 'Ej: 0 casos' },
@@ -886,7 +805,7 @@ export default function Formulario() {
                     </div>
 
                     <div className="space-y-6">
-                      {['2023', '2024', '2025'].map(year => {
+                      {YEARS_ROTACION.map(year => {
                         const rotYear = capData?.rotacion?.[year] || {};
                         const mRot = Number(rotYear.mujeres) || 0;
                         const hRot = Number(rotYear.hombres) || 0;
