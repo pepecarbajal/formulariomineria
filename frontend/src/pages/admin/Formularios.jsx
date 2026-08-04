@@ -109,7 +109,7 @@ function agregarTotales(formas) {
         res.esg[met.id][y] = vals.length ? String(+((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))) : '';
       } else {
         const acc = formas.reduce((a, f) => a + num(f.esg?.[met.id]?.[y]), 0);
-        res.esg[met.id][y] = acc ? String(acc) : '';
+        res.esg[met.id][y] = acc ? String(+acc.toFixed(2)) : '';
       }
     });
     const lista = [];
