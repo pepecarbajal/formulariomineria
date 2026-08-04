@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request } from '../services/api';
 import {
@@ -49,6 +49,7 @@ function HelpBtn({ text }) {
 }
 
 export default function Formulario() {
+  const DRAFT_KEY = 'formulario_borrador';
   const [currentStep, setCurrentStep] = useState(1);
   const [activeSocialTab, setActiveSocialTab] = useState(SOCIAL_CATEGORIES[0].id);
   const [activeCapacitacionTab, setActiveCapacitacionTab] = useState(CAPACITACION_TABS[0].id);
@@ -73,7 +74,10 @@ export default function Formulario() {
           reset(data);
         }
       } catch {
-        // sin formulario previo
+        try {
+          const draft = localStorage.getItem(DRAFT_KEY);
+          if (draft) reset(JSON.parse(draft));
+        } catch { /* borrador corrupto */ }
       } finally {
         if (!cancelled) setLoadingForm(false);
       }
@@ -106,6 +110,14 @@ export default function Formulario() {
   const socialData = watch('social');
   const capData = watch('capacitacionData');
 
+  useEffect(() => {
+    if (readOnly || loadingForm) return;
+    const subscription = watch((values) => {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, readOnly, loadingForm]);
+
   function fixArrays(val) {
     if (Array.isArray(val)) return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, fixArrays(v)]));
     if (val && typeof val === 'object') return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, fixArrays(v)]));
@@ -126,6 +138,7 @@ export default function Formulario() {
       } else {
         await request('/formularios', { method: 'POST', body: JSON.stringify(data) });
       }
+      localStorage.removeItem(DRAFT_KEY);
       navigate('/ya-enviado');
     } catch (error) {
       if (error.message?.includes('ya ha enviado')) {
@@ -365,6 +378,18 @@ export default function Formulario() {
     setCurrentStep(prev => prev - 1);
   };
 
+  const handleLogout = () => {
+    if (!readOnly) {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(getValues()));
+      } catch { /* sin espacio */ }
+    }
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
+    toast.success('Progreso guardado. Sesión cerrada.');
+    navigate('/');
+  };
+
   return (
     <main className="relative h-screen flex flex-col selection:bg-guinda selection:text-white">
       
@@ -376,6 +401,17 @@ export default function Formulario() {
       {/* OVERLAY DE CONTRASTE */}
       <div className="fixed inset-0 z-10 bg-zinc-950/70" />
 
+      {/* BOTÓN SALIR - ESQUINA INFERIOR IZQUIERDA DE LA PANTALLA */}
+      <button
+        type="button"
+        onClick={handleLogout}
+        title="Cerrar sesión y guardar progreso"
+        className="fixed bottom-5 left-5 z-30 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/25 hover:border-white/40 backdrop-blur-md transition-all active:scale-95"
+      >
+        <LogOut className="w-4 h-4" />
+        Salir
+      </button>
+
       {/* CONTENEDOR PRINCIPAL FLOTANTE */}
       <div className="relative z-20 max-w-4xl mx-auto w-full flex-1 flex flex-col px-2 sm:px-4 py-2 sm:py-4 min-h-0">
         
@@ -383,21 +419,21 @@ export default function Formulario() {
         <div className="bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/20 flex-1 flex flex-col overflow-hidden min-h-0">
           
           {/* Stepper Superior */}
-          <div className="bg-zinc-50/50 border-b border-zinc-200 px-4 sm:px-8 py-5 overflow-x-auto">
-            <div className="flex items-center justify-between relative min-w-[700px]">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-zinc-200 z-0"></div>
+          <div className="bg-zinc-50/50 border-b border-zinc-200 px-4 sm:px-8 py-5">
+            <div className="flex items-start justify-between relative gap-2 sm:gap-4 flex-wrap">
+              <div className="hidden sm:block absolute left-0 top-1/2 -translate-y-1/2 w-full h-[2px] bg-zinc-200 z-0"></div>
               {STEPS.map((step) => {
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
                 return (
-                  <div key={step.id} className="relative z-10 flex flex-col items-center bg-transparent px-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-150 text-xs font-bold ${
+                  <div key={step.id} className="relative z-10 flex flex-col items-center bg-transparent px-1 sm:px-4">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all duration-150 text-[11px] sm:text-xs font-bold ${
                       isActive ? 'bg-guinda border-guinda text-white' : 
                       isCompleted ? 'bg-white border-guinda text-guinda' : 'bg-white border-zinc-300 text-zinc-400'
                     }`}>
-                      {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : step.id}
+                      {isCompleted ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.id}
                     </div>
-                    <span className={`text-[10px] font-semibold mt-3 absolute -bottom-7 w-max tracking-wide ${
+                    <span className={`text-[9px] sm:text-[10px] font-semibold mt-2 text-center leading-tight ${
                       isActive || isCompleted ? 'text-zinc-700' : 'text-zinc-400'
                     }`}>
                       {step.title}
