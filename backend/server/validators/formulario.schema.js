@@ -32,6 +32,7 @@ const socialCategoriaSchema = z.object({
 
 export const crearFormularioSchema = z.object({
   empresaMatriz: z.string().max(300).optional().default(''),
+  paisOrigen: z.string().max(100).optional().default(''),
   subsidiaria: z.string().max(300).optional().default(''),
   unidadMinera: z.string().max(300).optional().default(''),
   tipoMinado: z.string().max(50).optional().default(''),

@@ -20,6 +20,7 @@ import {
   SOCIAL_DEFAULTS,
   CAPACITACION_DEFAULTS,
   HELP_TEXTS,
+  PAISES,
   esPorcentajeESG,
 } from '../config/formulario';
 
@@ -149,6 +150,7 @@ export default function Formulario() {
     if (step === 1) {
       csv = 'Campo,Valor\n' + [
         ['Empresa Matriz', data.empresaMatriz],
+        ['País de Origen del Capital', data.paisOrigen],
         ['Subsidiaria', data.subsidiaria],
         ['Unidad Minera', data.unidadMinera],
         ['Tipo de Minado', data.tipoMinado],
@@ -243,6 +245,7 @@ export default function Formulario() {
       content += `<h2 style="font-size:20px;margin-bottom:16px;color:#333;border-bottom:2px solid #8A1538;padding-bottom:8px;">DATOS GENERALES</h2>
       <table style="width:100%;border-collapse:collapse;">
         <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;width:40%;background:#fafafa;">Empresa Matriz</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.empresaMatriz || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">País de Origen del Capital</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.paisOrigen || ''}</td></tr>
         <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Subsidiaria</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.subsidiaria || ''}</td></tr>
         <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Unidad Minera</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.unidadMinera || ''}</td></tr>
         <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Tipo de Minado</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.tipoMinado || ''}</td></tr>
@@ -471,6 +474,16 @@ export default function Formulario() {
                           <AlertCircle className="w-3.5 h-3.5" /> {errors.empresaMatriz.message}
                         </p>
                       )}
+                    </div>
+
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">País de Origen del Capital <HelpBtn text={HELP_TEXTS.paisOrigen} /></label>
+                      <select {...register("paisOrigen")} className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
+                        <option value="">Selecciona el país de origen</option>
+                        {PAISES.map((pais) => (
+                          <option key={pais} value={pais}>{pais}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="space-y-2">

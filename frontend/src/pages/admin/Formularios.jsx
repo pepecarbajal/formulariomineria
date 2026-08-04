@@ -114,7 +114,7 @@ function agregarTotales(formas) {
   });
 
   res.capacidad = formas.reduce((a, f) => a + num(f.capacidad), 0) || '';
-  ['empresaMatriz', 'subsidiaria', 'unidadMinera', 'tipoMinado', 'fechaInicio', 'vidaUtil'].forEach((k) => {
+  ['empresaMatriz', 'paisOrigen', 'subsidiaria', 'unidadMinera', 'tipoMinado', 'fechaInicio', 'vidaUtil'].forEach((k) => {
     res[k] = generalAgregado(formas, k);
   });
 
@@ -144,6 +144,7 @@ function Seccion({ numero, titulo, subtitulo, children }) {
 function DatosGenerales({ data, esAgregado, companias }) {
   const campos = [
     ['Empresa Matriz', data.empresaMatriz],
+    ['País de Origen del Capital', data.paisOrigen],
     ['Subsidiaria', data.subsidiaria],
     ['Unidad Minera', data.unidadMinera],
     ['Tipo de Minado', data.tipoMinado],
@@ -399,6 +400,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias) {
   content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">1. Información General</h2>
     <table style="width:100%;border-collapse:collapse;">
       <tr><td style="${tdL}width:40%;background:#fafafa;">Empresa Matriz</td><td style="${td}">${data.empresaMatriz || ''}</td></tr>
+      <tr><td style="${tdL}background:#fafafa;">País de Origen del Capital</td><td style="${td}">${data.paisOrigen || ''}</td></tr>
       <tr><td style="${tdL}background:#fafafa;">Subsidiaria</td><td style="${td}">${data.subsidiaria || ''}</td></tr>
       <tr><td style="${tdL}background:#fafafa;">Unidad Minera</td><td style="${td}">${data.unidadMinera || ''}</td></tr>
       <tr><td style="${tdL}background:#fafafa;">Tipo de Minado</td><td style="${td}">${data.tipoMinado || ''}</td></tr>

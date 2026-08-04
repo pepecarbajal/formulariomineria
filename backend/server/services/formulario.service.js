@@ -118,19 +118,19 @@ export async function exportarExcel() {
   /* Hoja 1: Datos Generales */
   const hojaGeneral = workbook.addWorksheet('Datos Generales', { views: [{ state: 'frozen', ySplit: 1 }] })
   addHeaderRow(hojaGeneral, [
-    'Empresa', 'Usuario', 'Empresa Matriz', 'Subsidiaria', 'Unidad Minera',
+    'Empresa', 'Usuario', 'Empresa Matriz', 'País de Origen del Capital', 'Subsidiaria', 'Unidad Minera',
     'Tipo de Minado', 'Fecha de Inicio', 'Vida Útil (Años)', 'Capacidad (t/día)', 'Fecha de Envío',
   ])
   docs.forEach((d) => {
     const row = hojaGeneral.addRow([
-      d.empresa || '', d.username || '', d.empresaMatriz || '', d.subsidiaria || '',
+      d.empresa || '', d.username || '', d.empresaMatriz || '', d.paisOrigen || '', d.subsidiaria || '',
       d.unidadMinera || '', d.tipoMinado || '', d.fechaInicio || '',
       d.vidaUtil || '', d.capacidad || '', d.createdAt || '',
     ])
-    estilizarFila(hojaGeneral, row.number, 10)
+    estilizarFila(hojaGeneral, row.number, 11)
   })
   hojaGeneral.columns.forEach((col, i) => {
-    col.width = [18, 12, 24, 24, 24, 16, 14, 16, 16, 22][i] || 16
+    col.width = [18, 12, 24, 26, 24, 24, 16, 14, 16, 16, 22][i] || 16
   })
 
   /* Hoja 2: Producción */
