@@ -19,6 +19,29 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const COLORES_EMPRESA = [
+  'bg-red-600', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-600', 'bg-cyan-500',
+  'bg-blue-600', 'bg-purple-600', 'bg-pink-500', 'bg-stone-600', 'bg-teal-600', 'bg-rose-600',
+];
+
+const HEX_EMPRESA = [
+  '#dc2626', '#f97316', '#eab308', '#84cc16', '#16a34a', '#06b6d4',
+  '#2563eb', '#7c3aed', '#ec4899', '#8b5a2b', '#0d9488', '#d61f69',
+];
+
+function colorEmpresa(nombre) {
+  let h = 0;
+  const s = String(nombre || '');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % COLORES_EMPRESA.length;
+}
+
+function Distintivo({ nombre, className }) {
+  return (
+    <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${COLORES_EMPRESA[colorEmpresa(nombre)]} ${className || ''}`} aria-hidden="true" />
+  );
+}
+
 function agregarTotales(formas) {
   const res = { produccion: {}, esg: {}, social: {}, capacitacionData: { capacitacion: {}, rotacion: {} } };
 
@@ -89,11 +112,17 @@ function agregarTotales(formas) {
         res.esg[met.id][y] = acc ? String(acc) : '';
       }
     });
+    const lista = [];
     formas.forEach((f) => {
       const txt = f.esg?.[met.id]?.comentarios;
-      if (txt && String(txt).trim()) comentarios.push(`${f.empresa || f.username}: ${txt}`);
+      if (txt && String(txt).trim()) {
+        const nombre = f.empresa || f.username;
+        lista.push({ nombre, texto: txt });
+        comentarios.push(`${nombre}: ${txt}`);
+      }
     });
     res.esg[met.id].comentarios = comentarios.join('\n');
+    res.esg[met.id].comentariosLista = lista;
   });
 
   YEARS_ROTACION.forEach((y) => {
@@ -160,7 +189,8 @@ function DatosGenerales({ data, esAgregado, companias, formas }) {
           </p>
           <div className="flex flex-wrap gap-2">
             {companias.map((c) => (
-              <span key={c} className="inline-flex items-center text-xs font-medium text-zinc-700 bg-zinc-100 border border-zinc-200 rounded-full px-3 py-1">
+              <span key={c} className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 border border-zinc-200 rounded-full px-3 py-1">
+                <Distintivo nombre={c} />
                 {c}
               </span>
             ))}
@@ -174,6 +204,7 @@ function DatosGenerales({ data, esAgregado, companias, formas }) {
             return (
               <div key={f.id || f.username} className="rounded-2xl border border-zinc-200 overflow-hidden">
                 <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2">
+                  <Distintivo nombre={nombre} className="w-3 h-3" />
                   <h3 className="text-sm font-semibold text-zinc-900 truncate">{nombre}</h3>
                 </div>
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -241,6 +272,23 @@ function Produccion({ data, esAgregado }) {
   );
 }
 
+function ComentariosEmpresa({ lista }) {
+  if (!lista || lista.length === 0) return null;
+  return (
+    <div className="w-full min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-800 text-sm space-y-2">
+      {lista.map((item) => (
+        <p key={item.nombre} className="flex items-start gap-2">
+          <span className="inline-flex items-center gap-1.5 font-semibold shrink-0">
+            <span className={`w-2.5 h-2.5 rounded-full inline-block ${COLORES_EMPRESA[colorEmpresa(item.nombre)]}`} />
+            <span className="font-semibold text-zinc-800">{item.nombre}:</span>
+          </span>
+          <span className="break-words whitespace-pre-wrap flex-1">{item.texto}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function ESGSeccion({ data, esAgregado }) {
   return (
     <Seccion numero="3" titulo="Indicadores Ambientales y Sociales (ESG)" subtitulo="Métricas por año y acciones realizadas.">
@@ -268,7 +316,11 @@ function ESGSeccion({ data, esAgregado }) {
               </div>
               <div className="px-5 pb-5">
                 <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2023-2026</label>
-                <Valor value={esg.comentarios} className="min-h-[44px]" />
+                {esAgregado && esg.comentariosLista && esg.comentariosLista.length > 0 ? (
+                  <ComentariosEmpresa lista={esg.comentariosLista} />
+                ) : (
+                  <Valor value={esg.comentarios} className="min-h-[44px]" />
+                )}
               </div>
             </div>
           );
@@ -443,7 +495,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   if (esAgregado && formas.length) {
     formas.forEach((f) => {
       const nombre = f.empresa || f.username;
-      content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;">${nombre}</h3>
+      content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:6px;"></span>${nombre}</h3>
         <table style="width:100%;border-collapse:collapse;">
           ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${f[key] || ''}</td></tr>`).join('')}
         </table>`;
@@ -472,7 +524,16 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
         <tr><td style="${tdL}">Valor</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
       </table>`;
     if (esg.comentarios) {
-      content += `<p style="margin:4px 0 14px;font-size:11px;color:#333;">Acciones más importantes realizadas del periodo 2023-2026:<br/>${esg.comentarios.replace(/\n/g, '<br/>')}</p>`;
+      const lineas = esg.comentarios.split('\n').map((linea) => {
+        const sep = linea.indexOf(': ');
+        if (esAgregado && sep > 0) {
+          const nombre = linea.slice(0, sep);
+          const texto = linea.slice(sep + 2);
+          return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:5px;"></span><strong>${nombre}:</strong> ${texto}`;
+        }
+        return linea;
+      });
+      content += `<p style="margin:4px 0 14px;font-size:11px;color:#333;">Acciones más importantes realizadas del periodo 2023-2026:<br/>${lineas.join('<br/>')}</p>`;
     }
   });
 
