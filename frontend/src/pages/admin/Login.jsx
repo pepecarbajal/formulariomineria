@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoginLayout from '../../components/LoginLayout';
 
 export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -59,11 +60,21 @@ export default function AdminLogin() {
 
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium text-zinc-200 tracking-wide">Contraseña</label>
-          <input 
-            id="password" name="password" type="password" required 
-            className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
-            placeholder="••••••••"
-          />
+          <div className="relative">
+            <input 
+              id="password" name="password" type={showPassword ? 'text' : 'password'} required 
+              className="w-full h-12 pl-4 pr-12 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-white transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         <button 

@@ -19,6 +19,13 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const esc = (v) => String(v ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
+
 const COLORES_EMPRESA = [
   'bg-red-600', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-600', 'bg-cyan-500',
   'bg-blue-600', 'bg-purple-600', 'bg-pink-500', 'bg-stone-600', 'bg-teal-600', 'bg-rose-600',
@@ -68,7 +75,7 @@ function agregarTotales(formas) {
       const p = f.produccion?.[y] || {};
       METALS.forEach((m) => {
         const acc = num(res.produccion[y][m.key]) + num(p[m.key]);
-        res.produccion[y][m.key] = acc ? String(acc) : '';
+        res.produccion[y][m.key] = acc ? String(+acc.toFixed(6)) : '';
       });
     });
 
@@ -474,9 +481,9 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   const badge = (tipo) => `<span style="float:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${tipo === 'acumulado' ? '#1d4ed8' : '#047857'};">${tipo === 'acumulado' ? 'Acumulado' : 'Promedio'}</span>`;
 
   let content = `<h1 style="font-size:20px;color:#8A1538;margin:0 0 4px;">SEFODECO — Informe Minero Estatal</h1>
-    <p style="margin:0 0 4px;font-size:13px;color:#333;">Empresa(s): <strong>${titulo}</strong></p>`;
+    <p style="margin:0 0 4px;font-size:13px;color:#333;">Empresa(s): <strong>${esc(titulo)}</strong></p>`;
   if (esAgregado && companias.length) {
-    content += `<p style="margin:0 0 16px;font-size:12px;color:#555;">Comprende ${companias.length} reporte(s): ${companias.join(', ')}</p>`;
+    content += `<p style="margin:0 0 16px;font-size:12px;color:#555;">Comprende ${companias.length} reporte(s): ${esc(companias.join(', '))}</p>`;
   } else {
     content += `<p style="margin:0 0 16px;font-size:12px;color:#555;">&nbsp;</p>`;
   }
@@ -495,14 +502,14 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   if (esAgregado && formas.length) {
     formas.forEach((f) => {
       const nombre = f.empresa || f.username;
-      content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:6px;"></span>${nombre}</h3>
+      content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:6px;"></span>${esc(nombre)}</h3>
         <table style="width:100%;border-collapse:collapse;">
-          ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${f[key] || ''}</td></tr>`).join('')}
+          ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${esc(f[key])}</td></tr>`).join('')}
         </table>`;
     });
   } else {
     content += `<table style="width:100%;border-collapse:collapse;">
-      ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${data[key] || ''}</td></tr>`).join('')}
+      ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${esc(data[key])}</td></tr>`).join('')}
     </table>`;
   }
 
@@ -511,17 +518,17 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
       <tr><th style="${th}">Año</th>${METALS.map((m) => `<th style="${thR}">${m.label}</th>`).join('')}</tr>`;
   YEARS_ESG.forEach((y) => {
     const p = data.produccion?.[y] || {};
-    content += `<tr><td style="${tdL}">${y}</td>${METALS.map((m) => `<td style="${tdR}">${p[m.key] ? `${p[m.key]}${UNIT_MAP[m.key]}` : ''}</td>`).join('')}</tr>`;
+    content += `<tr><td style="${tdL}">${y}</td>${METALS.map((m) => `<td style="${tdR}">${p[m.key] ? `${esc(p[m.key])}${UNIT_MAP[m.key]}` : ''}</td>`).join('')}</tr>`;
   });
   content += `</table>`;
 
   content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales y Sociales (ESG)</h2>`;
   ESG_METRICS.forEach((met) => {
     const esg = data.esg?.[met.id] || {};
-    content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;overflow:hidden;">${met.fullTitle}${esAgregado ? badge(esPorcentajeESG(met.id) ? 'promedio' : 'acumulado') : ''}</h3>
+    content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;overflow:hidden;">${esc(met.fullTitle)}${esAgregado ? badge(esPorcentajeESG(met.id) ? 'promedio' : 'acumulado') : ''}</h3>
       <table style="width:100%;border-collapse:collapse;">
         <tr><th style="${th}">Año</th>${YEARS_ESG.map((y) => `<th style="${thR}">${y}</th>`).join('')}</tr>
-        <tr><td style="${tdL}">Valor</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
+        <tr><td style="${tdL}">Valor</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esc(esg[y])}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
       </table>`;
     if (esg.comentarios) {
       const lineas = esg.comentarios.split('\n').map((linea) => {
@@ -529,9 +536,9 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
         if (esAgregado && sep > 0) {
           const nombre = linea.slice(0, sep);
           const texto = linea.slice(sep + 2);
-          return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:5px;"></span><strong>${nombre}:</strong> ${texto}`;
+          return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:5px;"></span><strong>${esc(nombre)}:</strong> ${esc(texto)}`;
         }
-        return linea;
+        return esc(linea);
       });
       content += `<p style="margin:4px 0 14px;font-size:11px;color:#333;">Acciones más importantes realizadas del periodo 2023-2026:<br/>${lineas.join('<br/>')}</p>`;
     }

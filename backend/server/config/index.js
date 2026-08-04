@@ -16,7 +16,7 @@ const config = {
   },
   rateLimit: {
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 25,
     maxGlobal: 200,
   },
   bodyLimit: '1mb',

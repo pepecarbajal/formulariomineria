@@ -7,8 +7,10 @@ export async function add(data) {
   return docRef.id
 }
 
-export async function findAll(orderByField = 'createdAt', direction = 'desc') {
-  const snapshot = await coleccion().orderBy(orderByField, direction).get()
+export async function findAll(orderByField = 'createdAt', direction = 'desc', limit = 500) {
+  let query = coleccion().orderBy(orderByField, direction)
+  if (limit > 0) query = query.limit(limit)
+  const snapshot = await query.get()
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
 }
 
@@ -34,9 +36,4 @@ export async function findById(id) {
   const doc = await coleccion().doc(id).get()
   if (!doc.exists) return null
   return { id: doc.id, ...doc.data() }
-}
-
-export async function raw() {
-  const snapshot = await coleccion().get()
-  return snapshot.docs.map((d) => d.data())
 }

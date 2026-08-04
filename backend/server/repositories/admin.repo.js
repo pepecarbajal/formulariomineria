@@ -7,8 +7,3 @@ export async function findByEmail(email) {
   if (!doc.exists) return null
   return { id: doc.id, ...doc.data() }
 }
-
-export async function create(email, data) {
-  await docRef(email).set(data)
-  return { email, ...data }
-}

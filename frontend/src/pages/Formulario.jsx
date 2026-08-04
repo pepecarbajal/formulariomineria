@@ -24,6 +24,13 @@ import {
   esPorcentajeESG,
 } from '../config/formulario';
 
+const esc = (v) => String(v ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
+
 // Componente Tooltip / Ayuda
 function HelpBtn({ text }) {
   const [open, setOpen] = useState(false);
@@ -141,14 +148,7 @@ export default function Formulario() {
       localStorage.removeItem(DRAFT_KEY);
       navigate('/ya-enviado');
     } catch (error) {
-      if (error.message?.includes('ya ha enviado')) {
-        setReadOnly(true);
-        toast.error('Esta empresa ya había enviado su reporte.');
-        const existing = await request('/formularios/mi-formulario');
-        if (existing && existing.id) reset(existing);
-      } else {
-        toast.error(error.message || 'Error al enviar el formulario');
-      }
+      toast.error(error.message || 'Error al enviar el formulario');
     } finally {
       setIsSubmitting(false);
     }
@@ -257,14 +257,14 @@ export default function Formulario() {
     if (step === 1) {
       content += `<h2 style="font-size:20px;margin-bottom:16px;color:#333;border-bottom:2px solid #8A1538;padding-bottom:8px;">DATOS GENERALES</h2>
       <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;width:40%;background:#fafafa;">Empresa Matriz</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.empresaMatriz || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">País de Origen del Capital</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.paisOrigen || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Subsidiaria</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.subsidiaria || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Unidad Minera</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.unidadMinera || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Tipo de Minado</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.tipoMinado || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Fecha de Inicio</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.fechaInicio || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Vida Util (Años)</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.vidaUtil || ''}</td></tr>
-        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Capacidad (t/dia)</td><td style="padding:6px 8px;border:1px solid #ccc;">${data.capacidad || ''}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;width:40%;background:#fafafa;">Empresa Matriz</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.empresaMatriz)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">País de Origen del Capital</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.paisOrigen)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Subsidiaria</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.subsidiaria)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Unidad Minera</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.unidadMinera)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Tipo de Minado</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.tipoMinado)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Fecha de Inicio</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.fechaInicio)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Vida Util (Años)</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.vidaUtil)}</td></tr>
+        <tr><td style="padding:6px 8px;border:1px solid #ccc;font-weight:600;background:#fafafa;">Capacidad (t/dia)</td><td style="padding:6px 8px;border:1px solid #ccc;">${esc(data.capacidad)}</td></tr>
       </table>`;
     } else if (step === 2) {
       content += `<table style="width:100%;border-collapse:collapse;">
@@ -273,7 +273,7 @@ export default function Formulario() {
       YEARS_ESG.forEach(year => {
         const prod = data.produccion?.[year] || {};
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
-          ${METALS.map(m => `<td style="text-align:right;padding:8px;border:1px solid #ccc;">${prod[m.key] ? `${prod[m.key]}${UNIT_MAP[m.key]}` : '0'}</td>`).join('')}</tr>`;
+          ${METALS.map(m => `<td style="text-align:right;padding:8px;border:1px solid #ccc;">${prod[m.key] ? `${esc(prod[m.key])}${UNIT_MAP[m.key]}` : '0'}</td>`).join('')}</tr>`;
       });
       content += `</table>`;
     } else if (step === 3) {
@@ -284,8 +284,8 @@ export default function Formulario() {
       ESG_METRICS.forEach(m => {
         const esg = data.esg?.[m.id] || {};
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${m.fullTitle}</td>
-          ${YEARS_ESG.map(y => `<td style="text-align:center;padding:8px;border:1px solid #ccc;">${esg[y] ? `${esg[y]}${UNIT_MAP[m.id] || ''}` : ''}</td>`).join('')}
-          <td style="padding:8px;border:1px solid #ccc;">${esg.comentarios || ''}</td></tr>`;
+          ${YEARS_ESG.map(y => `<td style="text-align:center;padding:8px;border:1px solid #ccc;">${esg[y] ? `${esc(esg[y])}${UNIT_MAP[m.id] || ''}` : ''}</td>`).join('')}
+          <td style="padding:8px;border:1px solid #ccc;">${esc(esg.comentarios)}</td></tr>`;
       });
       content += `</table>`;
     } else if (step === 4) {
@@ -328,8 +328,8 @@ export default function Formulario() {
         const h = Number(c.hombres) || 0;
         const t = m + h;
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.mujeres ? `${c.mujeres} hrs` : '0'}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.hombres ? `${c.hombres} hrs` : '0'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.mujeres ? `${esc(c.mujeres)} hrs` : '0'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${c.hombres ? `${esc(c.hombres)} hrs` : '0'}</td>
           <td style="text-align:right;padding:8px;border:1px solid #ccc;font-weight:600;">${t > 0 ? `${t} hrs` : '0'}</td></tr>`;
       });
       content += `</table>`;
@@ -345,14 +345,15 @@ export default function Formulario() {
         const hRot = Number(r.hombres) || 0;
         const tRot = mRot > 0 || hRot > 0 ? ((mRot + hRot) / 2).toFixed(1) : '0.0';
         content += `<tr><td style="padding:8px;border:1px solid #ccc;font-weight:600;">${year}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.mujeres ? `${r.mujeres}%` : '0%'}</td>
-          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.hombres ? `${r.hombres}%` : '0%'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.mujeres ? `${esc(r.mujeres)}%` : '0%'}</td>
+          <td style="text-align:right;padding:8px;border:1px solid #ccc;">${r.hombres ? `${esc(r.hombres)}%` : '0%'}</td>
           <td style="text-align:right;padding:8px;border:1px solid #ccc;font-weight:600;">${tRot}%</td></tr>`;
       });
       content += `</table>`;
     }
 
     const printWin = window.open('', '_blank');
+    if (!printWin) return;
     printWin.document.write(`
       <html><head><title>${stepTitle}</title>
       <style>
@@ -489,7 +490,7 @@ export default function Formulario() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="md:col-span-2 space-y-2 relative group">
+                    <div className="space-y-2 relative group">
                       <label htmlFor="empresaMatriz" className="text-sm font-medium text-zinc-700 flex items-center justify-between">
                         <span>Empresa Matriz o Empresa <HelpBtn text={HELP_TEXTS.empresaMatriz} /></span>
                         <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">Requerido</span>
@@ -512,7 +513,7 @@ export default function Formulario() {
                       )}
                     </div>
 
-                    <div className="md:col-span-2 space-y-2">
+                    <div className="space-y-2">
                       <label className="text-sm font-medium text-zinc-700 inline-flex items-center">País de Origen del Capital <HelpBtn text={HELP_TEXTS.paisOrigen} /></label>
                       <select {...register("paisOrigen")} className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
                         <option value="">Selecciona el país de origen</option>
@@ -534,9 +535,9 @@ export default function Formulario() {
                       <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Tipo de Minado <HelpBtn text={HELP_TEXTS.tipoMinado} /></label>
                       <select {...register("tipoMinado")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
                         <option value="">Selecciona una opción</option>
-                        <option value="Subterraneo">Subterráneo</option>
-                        <option value="TajoAbierto">Tajo Abierto</option>
-                        <option value="Mixto">Mixto</option>
+                        <option value="Subterráneo">Subterráneo</option>
+                        <option value="Superficial">Superficial</option>
+                        <option value="Combinado">Combinado</option>
                       </select>
                     </div>
                     <div className="space-y-2">

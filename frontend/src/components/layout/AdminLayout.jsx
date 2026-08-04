@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, LogOut, Menu, X, ShieldCheck, FileText } from 'lucide-react';
+import { Users, LogOut, Menu, X, FileText } from 'lucide-react';
 
 export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -24,16 +24,6 @@ export default function AdminLayout() {
           SIDEBAR DESKTOP (Oculto en móviles)
       ========================================= */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-zinc-200 fixed h-full z-20">
-        <header className="p-6 border-b border-zinc-100 flex items-center gap-3">
-          <div className="w-9 h-9 bg-guinda rounded-xl flex items-center justify-center shadow-sm">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-900">SEFODECO</h2>
-            <p className="text-xs text-zinc-500 font-medium">Portal Administrativo</p>
-          </div>
-        </header>
-
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto" aria-label="Navegación principal">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path;
@@ -74,13 +64,7 @@ export default function AdminLayout() {
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         
         {/* Header Móvil */}
-        <header className="lg:hidden bg-white/80 backdrop-blur-md border-b border-zinc-200 h-16 flex items-center justify-between px-4 sticky top-0 z-30">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-guinda rounded-lg flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-semibold text-zinc-900 tracking-tight">SEFODECO</span>
-          </div>
+        <header className="lg:hidden bg-white/80 backdrop-blur-md border-b border-zinc-200 h-16 flex items-center justify-end px-4 sticky top-0 z-30">
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
             aria-expanded={isMobileMenuOpen}

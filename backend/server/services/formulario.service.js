@@ -1,6 +1,14 @@
 import * as formularioRepo from '../repositories/formulario.repo.js'
 import ExcelJS from 'exceljs'
 import { AppError } from '../middleware/errorHandler.js'
+import {
+  METALES,
+  YEARS_ESG,
+  YEARS_CAPACITACION,
+  YEARS_ROTACION,
+  ESG_METRICS,
+  SOCIAL_CATEGORIES,
+} from '../../../shared/catalogo.js'
 const { Workbook } = ExcelJS
 
 export async function enviar(data, usuario) {
@@ -55,29 +63,11 @@ export async function listar(usuario, queryUsername) {
   return formularioRepo.findAll()
 }
 
-const ANOS = ['2023', '2024', '2025', '2026']
-const ANOS_ROTACION = ['2023', '2024', '2025']
-const METALES = [
-  { key: 'oro', label: 'Oro (oz)' },
-  { key: 'plata', label: 'Plata (oz)' },
-  { key: 'cobre', label: 'Cobre (t)' },
-  { key: 'plomo', label: 'Plomo (t)' },
-  { key: 'zinc', label: 'Zinc (t)' },
-]
-const ESG_CATS = [
-  { key: 'incidentes', label: 'Incidentes Ambientales', unit: 'Casos' },
-  { key: 'cumplimiento', label: 'Cumplimiento Normativo', unit: '%' },
-  { key: 'agua-reciclada', label: 'Agua Reciclada', unit: '%' },
-  { key: 'reduccion-gei', label: 'Reducción GEI', unit: '%' },
-  { key: 'reforestacion', label: 'Reforestación', unit: 'Árboles' },
-  { key: 'inversion', label: 'Inversión Ambiental', unit: 'Millones USD' },
-]
-const SOCIAL_CATS = [
-  { key: 'empresa', label: 'Empresa' },
-  { key: 'contratistas', label: 'Contratistas' },
-  { key: 'comunidades', label: 'Comunidades' },
-  { key: 'guerrero', label: 'Guerrero' },
-]
+const ANOS = YEARS_ESG
+const ANOS_ROTACION = YEARS_ROTACION
+const METALES_EXCEL = METALES.map((m) => ({ key: m.key, label: `${m.label} (${m.unit})` }))
+const ESG_CATS = ESG_METRICS.map((m) => ({ key: m.id, label: m.label, unit: m.excelUnit || m.unit }))
+const SOCIAL_CATS = SOCIAL_CATEGORIES.map((c) => ({ key: c.id, label: c.label }))
 
 const HEADER_STYLE = {
   font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -135,12 +125,12 @@ export async function exportarExcel() {
 
   /* Hoja 2: Producción */
   const hojaProduccion = workbook.addWorksheet('Producción', { views: [{ state: 'frozen', ySplit: 1 }] })
-  addHeaderRow(hojaProduccion, ['Empresa', 'Año', ...METALES.map((m) => m.label)])
+  addHeaderRow(hojaProduccion, ['Empresa', 'Año', ...METALES_EXCEL.map((m) => m.label)])
   docs.forEach((d) => {
     const prod = d.produccion || {}
     ANOS.forEach((a) => {
       const anio = prod[a] || {}
-      const row = hojaProduccion.addRow([d.empresa || '', a, ...METALES.map((m) => (anio[m.key] === '' || anio[m.key] === undefined || anio[m.key] === null ? '' : anio[m.key]))])
+      const row = hojaProduccion.addRow([d.empresa || '', a, ...METALES_EXCEL.map((m) => (anio[m.key] === '' || anio[m.key] === undefined || anio[m.key] === null ? '' : anio[m.key]))])
       estilizarFila(hojaProduccion, row.number, 7)
     })
   })
