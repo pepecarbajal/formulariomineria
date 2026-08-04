@@ -181,7 +181,7 @@ export default function Formulario() {
       csv = rows.map(r => r.join(',')).join('\n');
       filename = 'Produccion.csv';
     } else if (step === 3) {
-      const rows = [['Concepto', '2023', '2024', '2025', '2026', 'Acciones 2022-2026']];
+      const rows = [['Concepto', '2023', '2024', '2025', '2026', 'Acciones 2023-2026']];
       ESG_METRICS.forEach(m => {
         const esg = data.esg?.[m.id] || {};
         rows.push([m.fullTitle,

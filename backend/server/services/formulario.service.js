@@ -150,7 +150,7 @@ export async function exportarExcel() {
 
   /* Hoja 3: Indicadores ESG */
   const hojaESG = workbook.addWorksheet('Indicadores ESG', { views: [{ state: 'frozen', ySplit: 1 }] })
-  addHeaderRow(hojaESG, ['Empresa', 'Concepto', 'Unidad', ...ANOS, 'Acciones 2022-2026'])
+  addHeaderRow(hojaESG, ['Empresa', 'Concepto', 'Unidad', ...ANOS, 'Acciones 2023-2026'])
   docs.forEach((d) => {
     const esg = d.esg || {}
     ESG_CATS.forEach((cat) => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Printer, FileSpreadsheet, EyeOff, Users } from 'lucide-react';
+import { Printer, FileSpreadsheet, EyeOff, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { request, API_URL } from '../../services/api';
 import {
@@ -18,15 +18,6 @@ const num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
-
-function generalAgregado(formas, key) {
-  const valores = formas
-    .map((f) => f[key])
-    .filter((v) => v !== undefined && v !== null && String(v).trim() !== '');
-  if (valores.length === 0) return '';
-  const unicos = [...new Set(valores.map((v) => String(v)))];
-  return unicos.length === 1 ? unicos[0] : `Múltiples (${unicos.length})`;
-}
 
 function agregarTotales(formas) {
   const res = { produccion: {}, esg: {}, social: {}, capacitacionData: { capacitacion: {}, rotacion: {} } };
@@ -113,11 +104,6 @@ function agregarTotales(formas) {
     };
   });
 
-  res.capacidad = formas.reduce((a, f) => a + num(f.capacidad), 0) || '';
-  ['empresaMatriz', 'paisOrigen', 'subsidiaria', 'unidadMinera', 'tipoMinado', 'fechaInicio', 'vidaUtil'].forEach((k) => {
-    res[k] = generalAgregado(formas, k);
-  });
-
   return res;
 }
 
@@ -129,28 +115,41 @@ function Valor({ value, className }) {
   );
 }
 
-function Seccion({ numero, titulo, subtitulo, children }) {
+function Leyenda({ tipo }) {
+  return (
+    <span className={`shrink-0 text-xs font-bold uppercase tracking-wider ${
+      tipo === 'acumulado' ? 'text-blue-700' : 'text-emerald-700'
+    }`}>
+      {tipo === 'acumulado' ? 'Acumulado' : 'Promedio'}
+    </span>
+  );
+}
+
+function Seccion({ numero, titulo, subtitulo, leyenda, children }) {
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
-      <div className="px-6 py-5 border-b border-zinc-100">
-        <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">{numero}. {titulo}</h2>
-        {subtitulo && <p className="text-sm text-zinc-500 mt-1">{subtitulo}</p>}
+      <div className="px-6 py-5 border-b border-zinc-100 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">{numero}. {titulo}</h2>
+          {subtitulo && <p className="text-sm text-zinc-500 mt-1">{subtitulo}</p>}
+        </div>
+        {leyenda && <Leyenda tipo={leyenda} />}
       </div>
       <div className="p-6">{children}</div>
     </section>
   );
 }
 
-function DatosGenerales({ data, esAgregado, companias }) {
+function DatosGenerales({ data, esAgregado, companias, formas }) {
   const campos = [
-    ['Empresa Matriz', data.empresaMatriz],
-    ['País de Origen del Capital', data.paisOrigen],
-    ['Subsidiaria', data.subsidiaria],
-    ['Unidad Minera', data.unidadMinera],
-    ['Tipo de Minado', data.tipoMinado],
-    ['Fecha de Inicio', data.fechaInicio],
-    ['Vida Útil (Años)', data.vidaUtil],
-    ['Capacidad (t/día)', data.capacidad],
+    ['Empresa Matriz', 'empresaMatriz'],
+    ['País de Origen del Capital', 'paisOrigen'],
+    ['Subsidiaria', 'subsidiaria'],
+    ['Unidad Minera', 'unidadMinera'],
+    ['Tipo de Minado', 'tipoMinado'],
+    ['Fecha de Inicio', 'fechaInicio'],
+    ['Vida Útil (Años)', 'vidaUtil'],
+    ['Capacidad (t/día)', 'capacidad'],
   ];
   return (
     <Seccion numero="1" titulo="Información General" subtitulo="Identificación de la unidad y capacidades operativas.">
@@ -161,28 +160,51 @@ function DatosGenerales({ data, esAgregado, companias }) {
           </p>
           <div className="flex flex-wrap gap-2">
             {companias.map((c) => (
-              <span key={c} className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 border border-zinc-200 rounded-full px-3 py-1">
-                <Building2 className="w-3.5 h-3.5 text-guinda" /> {c}
+              <span key={c} className="inline-flex items-center text-xs font-medium text-zinc-700 bg-zinc-100 border border-zinc-200 rounded-full px-3 py-1">
+                {c}
               </span>
             ))}
           </div>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {campos.map(([label, val]) => (
-          <div key={label} className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">{label}</label>
-            <Valor value={val} />
-          </div>
-        ))}
-      </div>
+      {esAgregado ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {formas.map((f) => {
+            const nombre = f.empresa || f.username;
+            return (
+              <div key={f.id || f.username} className="rounded-2xl border border-zinc-200 overflow-hidden">
+                <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900 truncate">{nombre}</h3>
+                </div>
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {campos.map(([label, key]) => (
+                    <div key={label} className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">{label}</label>
+                      <Valor value={f[key]} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {campos.map(([label, key]) => (
+            <div key={key} className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">{label}</label>
+              <Valor value={data[key]} />
+            </div>
+          ))}
+        </div>
+      )}
     </Seccion>
   );
 }
 
-function Produccion({ data }) {
+function Produccion({ data, esAgregado }) {
   return (
-    <Seccion numero="2" titulo="Producción" subtitulo="Volumen total extraído por año.">
+    <Seccion numero="2" titulo="Producción" subtitulo="Volumen total extraído por año." leyenda={esAgregado ? 'acumulado' : undefined}>
       <div className="border border-zinc-200 rounded-2xl overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-zinc-50 border-b border-zinc-200">
@@ -219,7 +241,7 @@ function Produccion({ data }) {
   );
 }
 
-function ESGSeccion({ data }) {
+function ESGSeccion({ data, esAgregado }) {
   return (
     <Seccion numero="3" titulo="Indicadores Ambientales y Sociales (ESG)" subtitulo="Métricas por año y acciones realizadas.">
       <div className="space-y-4">
@@ -227,9 +249,12 @@ function ESGSeccion({ data }) {
           const esg = data.esg?.[met.id] || {};
           return (
             <div key={met.id} className="rounded-2xl border border-zinc-200 overflow-hidden">
-              <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="text-sm font-semibold text-zinc-900">{met.fullTitle}</h3>
-                <span className="text-xs text-zinc-500">Unidad: {met.unit}</span>
+              <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h3 className="text-sm font-semibold text-zinc-900">{met.fullTitle}</h3>
+                  <span className="text-xs text-zinc-500">Unidad: {met.unit}</span>
+                </div>
+                {esAgregado && <Leyenda tipo={esPorcentajeESG(met.id) ? 'promedio' : 'acumulado'} />}
               </div>
               <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {YEARS_ESG.map((y) => (
@@ -242,7 +267,7 @@ function ESGSeccion({ data }) {
                 ))}
               </div>
               <div className="px-5 pb-5">
-                <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2022-2026</label>
+                <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2023-2026</label>
                 <Valor value={esg.comentarios} className="min-h-[44px]" />
               </div>
             </div>
@@ -253,9 +278,9 @@ function ESGSeccion({ data }) {
   );
 }
 
-function SocialSeccion({ data }) {
+function SocialSeccion({ data, esAgregado }) {
   return (
-    <Seccion numero="4" titulo="Impacto Social y Empleo" subtitulo="Personal femenino y masculino por categoría.">
+    <Seccion numero="4" titulo="Impacto Social y Empleo" subtitulo="Personal femenino y masculino por categoría." leyenda={esAgregado ? 'acumulado' : undefined}>
       <div className="space-y-8">
         {SOCIAL_CATEGORIES.map((cat) => (
           <div key={cat.id}>
@@ -306,14 +331,17 @@ function SocialSeccion({ data }) {
   );
 }
 
-function CapacitacionSeccion({ data }) {
+function CapacitacionSeccion({ data, esAgregado }) {
   const cap = data.capacitacionData?.capacitacion || {};
   const rot = data.capacitacionData?.rotacion || {};
   return (
     <Seccion numero="5" titulo="Capacitación y Rotación de Personal" subtitulo="Horas de capacitación en seguridad y tasas de rotación anual.">
       <div className="space-y-8">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 mb-3">Capacitación en Seguridad (Horas)</h3>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-sm font-semibold text-zinc-900">Capacitación en Seguridad (Horas)</h3>
+            {esAgregado && <Leyenda tipo="acumulado" />}
+          </div>
           <div className="border border-zinc-200 rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-zinc-50 border-b border-zinc-200">
@@ -347,7 +375,10 @@ function CapacitacionSeccion({ data }) {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 mb-3">Tasa de Rotación de Personal (%)</h3>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-sm font-semibold text-zinc-900">Tasa de Rotación de Personal (%)</h3>
+            {esAgregado && <Leyenda tipo="promedio" />}
+          </div>
           <div className="border border-zinc-200 rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-zinc-50 border-b border-zinc-200">
@@ -382,12 +413,13 @@ function CapacitacionSeccion({ data }) {
   );
 }
 
-function generarHTMLInforme(data, titulo, esAgregado, companias) {
+function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   const th = 'text-align:left;padding:6px 8px;border:1px solid #ccc;background:#eee;font-weight:700;';
   const thR = `text-align:right;padding:6px 8px;border:1px solid #ccc;background:#eee;font-weight:700;`;
   const td = 'padding:6px 8px;border:1px solid #ccc;';
   const tdR = 'text-align:right;padding:6px 8px;border:1px solid #ccc;';
   const tdL = 'padding:6px 8px;border:1px solid #ccc;font-weight:600;';
+  const badge = (tipo) => `<span style="float:right;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${tipo === 'acumulado' ? '#1d4ed8' : '#047857'};">${tipo === 'acumulado' ? 'Acumulado' : 'Promedio'}</span>`;
 
   let content = `<h1 style="font-size:20px;color:#8A1538;margin:0 0 4px;">SEFODECO — Informe Minero Estatal</h1>
     <p style="margin:0 0 4px;font-size:13px;color:#333;">Empresa(s): <strong>${titulo}</strong></p>`;
@@ -397,19 +429,32 @@ function generarHTMLInforme(data, titulo, esAgregado, companias) {
     content += `<p style="margin:0 0 16px;font-size:12px;color:#555;">&nbsp;</p>`;
   }
 
-  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">1. Información General</h2>
-    <table style="width:100%;border-collapse:collapse;">
-      <tr><td style="${tdL}width:40%;background:#fafafa;">Empresa Matriz</td><td style="${td}">${data.empresaMatriz || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">País de Origen del Capital</td><td style="${td}">${data.paisOrigen || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Subsidiaria</td><td style="${td}">${data.subsidiaria || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Unidad Minera</td><td style="${td}">${data.unidadMinera || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Tipo de Minado</td><td style="${td}">${data.tipoMinado || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Fecha de Inicio</td><td style="${td}">${data.fechaInicio || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Vida Útil (Años)</td><td style="${td}">${data.vidaUtil || ''}</td></tr>
-      <tr><td style="${tdL}background:#fafafa;">Capacidad (t/día)</td><td style="${td}">${data.capacidad || ''}</td></tr>
+  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">1. Información General</h2>`;
+  const camposGeneral = [
+    ['Empresa Matriz', 'empresaMatriz'],
+    ['País de Origen del Capital', 'paisOrigen'],
+    ['Subsidiaria', 'subsidiaria'],
+    ['Unidad Minera', 'unidadMinera'],
+    ['Tipo de Minado', 'tipoMinado'],
+    ['Fecha de Inicio', 'fechaInicio'],
+    ['Vida Útil (Años)', 'vidaUtil'],
+    ['Capacidad (t/día)', 'capacidad'],
+  ];
+  if (esAgregado && formas.length) {
+    formas.forEach((f) => {
+      const nombre = f.empresa || f.username;
+      content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;">${nombre}</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${f[key] || ''}</td></tr>`).join('')}
+        </table>`;
+    });
+  } else {
+    content += `<table style="width:100%;border-collapse:collapse;">
+      ${camposGeneral.map(([label, key]) => `<tr><td style="${tdL}width:40%;background:#fafafa;">${label}</td><td style="${td}">${data[key] || ''}</td></tr>`).join('')}
     </table>`;
+  }
 
-  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">2. Producción</h2>
+  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;overflow:hidden;">2. Producción${esAgregado ? badge('acumulado') : ''}</h2>
     <table style="width:100%;border-collapse:collapse;">
       <tr><th style="${th}">Año</th>${METALS.map((m) => `<th style="${thR}">${m.label}</th>`).join('')}</tr>`;
   YEARS_ESG.forEach((y) => {
@@ -418,16 +463,20 @@ function generarHTMLInforme(data, titulo, esAgregado, companias) {
   });
   content += `</table>`;
 
-  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales y Sociales (ESG)</h2>
-    <table style="width:100%;border-collapse:collapse;">
-      <tr><th style="${th}">Concepto</th>${YEARS_ESG.map((y) => `<th style="${thR}">${y}</th>`).join('')}<th style="${th}">Acciones</th></tr>`;
+  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales y Sociales (ESG)</h2>`;
   ESG_METRICS.forEach((met) => {
     const esg = data.esg?.[met.id] || {};
-    content += `<tr><td style="${tdL}">${met.fullTitle}</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}<td style="${td}">${(esg.comentarios || '').replace(/\n/g, '<br/>')}</td></tr>`;
+    content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;overflow:hidden;">${met.fullTitle}${esAgregado ? badge(esPorcentajeESG(met.id) ? 'promedio' : 'acumulado') : ''}</h3>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><th style="${th}">Año</th>${YEARS_ESG.map((y) => `<th style="${thR}">${y}</th>`).join('')}</tr>
+        <tr><td style="${tdL}">Valor</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
+      </table>`;
+    if (esg.comentarios) {
+      content += `<p style="margin:4px 0 14px;font-size:11px;color:#333;">Acciones más importantes realizadas del periodo 2023-2026:<br/>${esg.comentarios.replace(/\n/g, '<br/>')}</p>`;
+    }
   });
-  content += `</table>`;
 
-  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">4. Impacto Social y Empleo</h2>`;
+  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">4. Impacto Social y Empleo${esAgregado ? badge('acumulado') : ''}</h2>`;
   SOCIAL_CATEGORIES.forEach((cat) => {
     content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;">${cat.label}</h3>
       <table style="width:100%;border-collapse:collapse;">
@@ -447,7 +496,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias) {
   const cap = data.capacitacionData?.capacitacion || {};
   const rot = data.capacitacionData?.rotacion || {};
   content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">5. Capacitación y Rotación de Personal</h2>
-    <h3 style="font-size:13px;color:#333;margin:12px 0 6px;">Capacitación en Seguridad (Horas)</h3>
+    <h3 style="font-size:13px;color:#333;margin:12px 0 6px;">Capacitación en Seguridad (Horas)${esAgregado ? badge('acumulado') : ''}</h3>
     <table style="width:100%;border-collapse:collapse;">
       <tr><th style="${th}">Año</th><th style="${thR}">Mujeres</th><th style="${thR}">Hombres</th><th style="${thR}">Total</th></tr>`;
   YEARS_CAPACITACION.forEach((y) => {
@@ -458,7 +507,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias) {
     content += `<tr><td style="${tdL}">${y}</td><td style="${tdR}">${m ? `${m} hrs` : ''}</td><td style="${tdR}">${h ? `${h} hrs` : ''}</td><td style="${tdR}">${t ? `${t} hrs` : ''}</td></tr>`;
   });
   content += `</table>
-    <h3 style="font-size:13px;color:#333;margin:12px 0 6px;">Tasa de Rotación de Personal (%)</h3>
+    <h3 style="font-size:13px;color:#333;margin:12px 0 6px;">Tasa de Rotación de Personal (%)${esAgregado ? badge('promedio') : ''}</h3>
     <table style="width:100%;border-collapse:collapse;">
       <tr><th style="${th}">Año</th><th style="${thR}">Mujeres</th><th style="${thR}">Hombres</th><th style="${thR}">Total</th></tr>`;
   YEARS_ROTACION.forEach((y) => {
@@ -528,7 +577,7 @@ export default function AdminFormularios() {
     if (!data) return;
     const printWin = window.open('', '_blank');
     if (!printWin) return;
-    printWin.document.write(generarHTMLInforme(data, titulo, esAgregado, companiasIncluidas));
+    printWin.document.write(generarHTMLInforme(data, titulo, esAgregado, companiasIncluidas, formasFiltradas));
     printWin.document.close();
     printWin.focus();
     setTimeout(() => printWin.print(), 300);
@@ -626,7 +675,7 @@ export default function AdminFormularios() {
       ) : (
         <>
           <div className={`rounded-2xl border px-5 py-3.5 text-sm flex items-center gap-2.5 ${esAgregado ? 'bg-guinda/5 border-guinda/20 text-guinda' : 'bg-zinc-100 border-zinc-200 text-zinc-700'}`}>
-            {esAgregado ? <Users className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+            <Users className="w-4 h-4" />
             <span>
               {esAgregado
                 ? `Mostrando totales agregados de ${formasFiltradas.length} reporte(s) de ${companiasIncluidas.length} empresa(s).`
@@ -635,11 +684,11 @@ export default function AdminFormularios() {
           </div>
 
           <div className="space-y-8">
-            <DatosGenerales data={data} esAgregado={esAgregado} companias={companiasIncluidas} />
-            <Produccion data={data} />
-            <ESGSeccion data={data} />
-            <SocialSeccion data={data} />
-            <CapacitacionSeccion data={data} />
+            <DatosGenerales data={data} esAgregado={esAgregado} companias={companiasIncluidas} formas={formasFiltradas} />
+            <Produccion data={data} esAgregado={esAgregado} />
+            <ESGSeccion data={data} esAgregado={esAgregado} />
+            <SocialSeccion data={data} esAgregado={esAgregado} />
+            <CapacitacionSeccion data={data} esAgregado={esAgregado} />
           </div>
         </>
       )}
