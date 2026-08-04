@@ -37,3 +37,8 @@ export async function findById(id) {
   if (!doc.exists) return null
   return { id: doc.id, ...doc.data() }
 }
+
+export async function removeByUsername(username) {
+  const snapshot = await coleccion().where('username', '==', username).get()
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()))
+}

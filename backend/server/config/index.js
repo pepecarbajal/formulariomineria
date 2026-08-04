@@ -1,15 +1,18 @@
 import crypto from 'crypto'
 
-function generarJwtSecret() {
-  const secret = crypto.randomBytes(32).toString('hex')
-  console.log('⚠️  JWT_SECRET no definido. Se generó un secret automático.')
-  console.log(`   Para fijarlo: export JWT_SECRET="${secret}"`)
-  return secret
+function requerirJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    const ejemplo = crypto.randomBytes(32).toString('hex')
+    console.error('❌ JWT_SECRET es obligatorio. Configúralo en el archivo .env:')
+    console.error(`   JWT_SECRET="${ejemplo}"`)
+    process.exit(1)
+  }
+  return process.env.JWT_SECRET
 }
 
 const config = {
   port: parseInt(process.env.PORT, 10) || 3001,
-  jwtSecret: process.env.JWT_SECRET || generarJwtSecret(),
+  jwtSecret: requerirJwtSecret(),
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   admin: {
     email: process.env.ADMIN_EMAIL,

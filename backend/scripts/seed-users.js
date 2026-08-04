@@ -27,8 +27,8 @@ const USERS = [
 ]
 
 const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD
-if (!DEFAULT_PASSWORD || DEFAULT_PASSWORD.length < 8) {
-  console.error('SEED_USER_PASSWORD debe tener al menos 8 caracteres.')
+if (!DEFAULT_PASSWORD || DEFAULT_PASSWORD.length < 12 || !/\d/.test(DEFAULT_PASSWORD)) {
+  console.error('SEED_USER_PASSWORD debe tener al menos 12 caracteres e incluir al menos un número.')
   process.exit(1)
 }
 

@@ -1,4 +1,5 @@
 import * as usuarioRepo from '../repositories/usuario.repo.js'
+import * as formularioRepo from '../repositories/formulario.repo.js'
 import { hashPassword } from '../utils/hash.js'
 import { AppError } from '../middleware/errorHandler.js'
 
@@ -20,6 +21,7 @@ export async function crear({ empresa, username, password }) {
 }
 
 export async function eliminar(username) {
+  await formularioRepo.removeByUsername(username)
   await usuarioRepo.remove(username)
   return { success: true }
 }

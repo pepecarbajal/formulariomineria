@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import config from '../config/index.js'
 
 export function generarToken(payload) {
-  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn })
+  return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresIn, algorithm: 'HS256' })
 }
 
 export function verificarToken(req, res, next) {
@@ -12,7 +12,7 @@ export function verificarToken(req, res, next) {
   }
   try {
     const token = header.split(' ')[1]
-    req.usuario = jwt.verify(token, config.jwtSecret)
+    req.usuario = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] })
     next()
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' })

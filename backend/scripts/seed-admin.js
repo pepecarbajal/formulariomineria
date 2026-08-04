@@ -28,8 +28,8 @@ if (!EMAIL) {
   process.exit(1)
 }
 
-if (!PASSWORD || PASSWORD.length < 8) {
-  console.error('ADMIN_PASSWORD debe tener al menos 8 caracteres.')
+if (!PASSWORD || PASSWORD.length < 12 || !/\d/.test(PASSWORD)) {
+  console.error('ADMIN_PASSWORD debe tener al menos 12 caracteres e incluir al menos un número.')
   process.exit(1)
 }
 

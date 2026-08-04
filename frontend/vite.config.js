@@ -9,6 +9,12 @@ export default defineConfig({
     fs: {
       allow: ['..'],
     },
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+    },
     proxy: {
       '/api': 'http://localhost:3001',
     },
