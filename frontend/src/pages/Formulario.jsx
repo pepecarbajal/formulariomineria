@@ -760,7 +760,7 @@ export default function Formulario() {
                               </div>
                             ))}
                             <div className="pt-2">
-                              <label className="text-xs font-medium text-zinc-600 mb-1 block" htmlFor={`esg-${metric.id}-comentarios`}>Acciones más importantes realizadas del periodo 2023-2026</label>
+                              <label className="text-xs font-medium text-zinc-600 mb-1 block" htmlFor={`esg-${metric.id}-comentarios`}>Mencione las acciones más importantes realizadas del periodo 2023-2026</label>
                               <textarea
                                 id={`esg-${metric.id}-comentarios`}
                                 readOnly={readOnly}

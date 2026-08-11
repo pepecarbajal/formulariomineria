@@ -26,6 +26,17 @@ body {
   cursor: default;
 }
 
+/* Carrusel del login: zoom lento para suavizar el crossfade */
+@keyframes kenburns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.12); }
+}
+
+.carousel-zoom {
+  will-change: transform, opacity;
+  animation: kenburns 22s ease-in-out forwards;
+}
+
 @media print {
   html, body { height: auto !important; overflow: visible !important; background: white !important; }
   body > *:not(.print-area) { display: none !important; }

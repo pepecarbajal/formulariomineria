@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 
 const CAROUSEL_IMAGES = [
-  '/carrusel1.jpg',
-  '/carrusel2.jpg',
-  '/carrusel3.jpg',
+  '/carrusel1.webp',
+  '/carrusel2.webp',
+  '/carrusel3.webp',
+  '/3.webp',
 ];
 
 export default function LoginLayout({ children }) {
@@ -26,7 +27,7 @@ export default function LoginLayout({ children }) {
         {CAROUSEL_IMAGES.map((src, i) => (
           <div
             key={src}
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-[800ms]"
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-[1100ms] ease-in-out ${i === index ? 'carousel-zoom' : ''}`}
             style={{
               backgroundImage: `url('${src}')`,
               opacity: i === index ? 1 : 0,
@@ -41,9 +42,9 @@ export default function LoginLayout({ children }) {
         {/* HEADER */}
         <header className="absolute top-0 left-0 right-0 px-6 md:px-8 py-6 flex items-center justify-center">
           <div className="flex items-center gap-4">
-            <img src="/1.png" width={692} height={263} alt="Gobierno del Estado de Guerrero" className="h-14 sm:h-16 object-contain drop-shadow-lg" />
+            <img src="/1.webp" width={692} height={263} alt="Gobierno del Estado de Guerrero" className="h-14 sm:h-16 object-contain drop-shadow-lg" />
             <div className="w-px h-10 bg-white/20" />
-            <img src="/2.png" width={2400} height={626} alt="SEFODECO" className="h-14 sm:h-16 w-auto object-contain drop-shadow-lg" />
+            <img src="/2.webp" width={2400} height={626} alt="SEFODECO" className="h-14 sm:h-16 w-auto object-contain drop-shadow-lg" />
           </div>
 
         </header>

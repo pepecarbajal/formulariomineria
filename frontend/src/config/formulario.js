@@ -8,12 +8,12 @@ export const STEPS = [
 ];
 
 export const BACKGROUNDS = {
-  1: '/bg-tunel.jpg',
-  2: '/bg-produccion.jpg',
-  3: '/bg-esg.jpg',
-  4: '/bg-social.jpg',
-  5: '/bg-capacitacion.jpg',
-  6: '/bg-revision.jpg'
+  1: '/bg-tunel.webp',
+  2: '/bg-produccion.webp',
+  3: '/bg-esg.webp',
+  4: '/bg-social.webp',
+  5: '/bg-capacitacion.webp',
+  6: '/bg-revision.webp'
 };
 
 import { METALES, YEARS_ESG, YEARS_SOCIAL, YEARS_CAPACITACION, YEARS_ROTACION, ESG_METRICS, SOCIAL_CATEGORIES } from '../../../shared/catalogo.js';
