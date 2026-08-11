@@ -367,7 +367,7 @@ export default function Formulario() {
       </style></head><body>
 
       ${content}
-      <p style="text-align:center;margin-top:24px;font-size:10px;color:#999;">Generado el ${new Date().toLocaleDateString('es-MX')}</p>
+      <p style="text-align:center;margin-top:24px;font-size:10px;color:#999;">Documento generado por la Secretaría de Fomento y Desarrollo Económico el ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </body></html>
     `);
     printWin.document.close();

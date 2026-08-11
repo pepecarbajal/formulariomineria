@@ -555,22 +555,23 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales y Sociales (ESG)</h2>`;
   ESG_METRICS.forEach((met) => {
     const esg = data.esg?.[met.id] || {};
-    content += `<h3 style="font-size:13px;color:#333;margin:12px 0 6px;overflow:hidden;">${esc(met.fullTitle)}${esAgregado ? badge(esPorcentajeESG(met.id) ? 'promedio' : 'acumulado') : ''}</h3>
+    content += `<h3 style="font-size:13px;color:#000;margin:12px 0 6px;">${esc(met.fullTitle)}</h3>
       <table style="width:100%;border-collapse:collapse;">
-        <tr><th style="${th}">Año</th>${YEARS_ESG.map((y) => `<th style="${thR}">${y}</th>`).join('')}</tr>
-        <tr><td style="${tdL}">Valor</td>${YEARS_ESG.map((y) => `<td style="${tdR}">${esg[y] ? `${esc(esg[y])}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
+        <tr>${YEARS_ESG.map((y) => `<th style="text-align:center;padding:6px 8px;border:1px solid #999;background:#eee;font-weight:700;">${y}${y === '2026' ? '*' : ''}</th>`).join('')}</tr>
+        <tr>${YEARS_ESG.map((y) => `<td style="text-align:center;padding:6px 8px;border:1px solid #999;font-weight:600;">${esg[y] ? `${esc(esg[y])}${UNIT_MAP[met.id] || ''}` : ''}</td>`).join('')}</tr>
       </table>`;
-    if (esg.comentarios) {
-      const lineas = esg.comentarios.split('\n').map((linea) => {
-        const sep = linea.indexOf(': ');
-        if (esAgregado && sep > 0) {
-          const nombre = linea.slice(0, sep);
-          const texto = linea.slice(sep + 2);
-          return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(nombre)]};margin-right:5px;"></span><strong>${esc(nombre)}:</strong> ${esc(texto)}`;
-        }
-        return esc(linea);
-      });
-      content += `<p style="margin:4px 0 14px;font-size:11px;color:#333;">Acciones más importantes realizadas del periodo 2023-2026:<br/>${lineas.join('<br/>')}</p>`;
+    const lista = esAgregado && esg.comentariosLista && esg.comentariosLista.length > 0
+      ? esg.comentariosLista
+      : esg.comentarios
+        ? [{ nombre: data?.empresa || data?.username || 'Empresa', texto: esg.comentarios }]
+        : [];
+    const filas = lista.filter((i) => i.texto && String(i.texto).trim());
+    content += `<h3 style="font-size:13px;color:#000;margin:14px 0 6px;">Acciones más importantes realizadas del periodo 2023-2026</h3>`;
+    if (filas.length) {
+      content += `<table style="width:100%;border-collapse:collapse;">
+        <tr><th style="${th}width:30%;">Empresa</th><th style="${th}">Acciones</th></tr>
+        ${filas.map((item) => `<tr><td style="${tdL}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${HEX_EMPRESA[colorEmpresa(item.nombre)]};margin-right:5px;"></span>${esc(item.nombre)}</td><td style="${td}">${esc(item.texto)}</td></tr>`).join('')}
+      </table>`;
     }
   });
 
@@ -617,7 +618,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   });
   content += `</table>`;
 
-  content += `<p style="text-align:center;margin-top:24px;font-size:10px;color:#999;">Generado el ${new Date().toLocaleDateString('es-MX')}</p>`;
+  content += `<p style="text-align:center;margin-top:24px;font-size:10px;color:#999;">Documento generado por la Secretaría de Fomento y Desarrollo Económico el ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}</p>`;
 
   return `<!DOCTYPE html><html><head><title>Informe ${titulo}</title>
     <style>
