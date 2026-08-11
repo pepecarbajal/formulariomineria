@@ -16,7 +16,7 @@ export default class ErrorBoundary extends Component {
         <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-8">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-              <span className="text-red-600 text-2xl font-bold">!</span>
+              <span aria-hidden="true" className="text-red-600 text-2xl font-bold">!</span>
             </div>
             <h1 className="text-xl font-semibold text-zinc-900">Algo salió mal</h1>
             <p className="text-sm text-zinc-500 max-w-md">

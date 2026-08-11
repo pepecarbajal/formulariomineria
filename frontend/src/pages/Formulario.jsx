@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, Building2, EyeOff, Download, FileText, LogOut } from 'lucide-react';
@@ -34,19 +34,29 @@ const esc = (v) => String(v ?? '')
 // Componente Tooltip / Ayuda
 function HelpBtn({ text }) {
   const [open, setOpen] = useState(false);
+  const id = useId();
   return (
     <span className="relative inline-flex">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        aria-label={`Ayuda: ${text}`}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(o => !o)}
         onBlur={() => setOpen(false)}
-        aria-label="Ver más información"
-        className="w-4 h-4 rounded-full bg-zinc-200 text-zinc-500 text-[10px] font-bold flex items-center justify-center hover:bg-guinda hover:text-white transition-colors ml-1.5 flex-shrink-0"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+        className="w-4 h-4 rounded-full bg-zinc-200 text-zinc-600 text-[10px] font-bold flex items-center justify-center hover:bg-guinda hover:text-white focus:bg-guinda focus:text-white focus:outline-none focus:ring-2 focus:ring-guinda/40 transition-colors ml-1.5 flex-shrink-0"
       >
         ?
       </button>
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-zinc-900 text-white text-xs leading-relaxed rounded-lg shadow-lg z-50 animate-in fade-in zoom-in-95 duration-200">
+        <div
+          id={id}
+          role="tooltip"
+          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-zinc-900 text-white text-xs leading-relaxed rounded-lg shadow-lg z-50 animate-in fade-in zoom-in-95 duration-200"
+        >
           {text}
           <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-zinc-900" />
         </div>
@@ -55,8 +65,18 @@ function HelpBtn({ text }) {
   );
 }
 
+function SummaryRow({ label, value }) {
+  return (
+    <dl className="px-4 py-3 flex justify-between gap-4">
+      <dt className="text-sm text-zinc-600">{label}</dt>
+      <dd className="text-sm font-semibold text-zinc-900 text-right">{esc(value) || <span className="font-normal text-zinc-500">Sin capturar</span>}</dd>
+    </dl>
+  );
+}
+
 export default function Formulario() {
   const DRAFT_KEY = 'formulario_borrador';
+  const draftTimerRef = useRef(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [activeSocialTab, setActiveSocialTab] = useState(SOCIAL_CATEGORIES[0].id);
   const [activeCapacitacionTab, setActiveCapacitacionTab] = useState(CAPACITACION_TABS[0].id);
@@ -66,8 +86,51 @@ export default function Formulario() {
   const [loadingForm, setLoadingForm] = useState(true);
   const navigate = useNavigate();
   const formScrollRef = useRef(null);
+  const headingRef = useRef(null);
+  const privacidadDialogRef = useRef(null);
+  const privacidadLastFocusRef = useRef(null);
   const [privacidadOpen, setPrivacidadOpen] = useState(false);
   const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
+
+  const openPrivacidad = () => {
+    privacidadLastFocusRef.current = document.activeElement;
+    setPrivacidadOpen(true);
+  };
+
+  const closePrivacidad = () => {
+    setPrivacidadOpen(false);
+    privacidadLastFocusRef.current?.focus?.();
+  };
+
+  useEffect(() => {
+    if (!privacidadOpen) return undefined;
+    document.body.style.overflow = 'hidden';
+    const first = privacidadDialogRef.current?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    first?.focus();
+    return () => { document.body.style.overflow = ''; };
+  }, [privacidadOpen]);
+
+  const onPrivacidadKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closePrivacidad();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const dlg = privacidadDialogRef.current;
+    if (!dlg) return;
+    const focusables = dlg.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +159,7 @@ export default function Formulario() {
     if (formScrollRef.current) {
       formScrollRef.current.scrollTop = 0;
     }
+    headingRef.current?.focus({ preventScroll: true });
   }, [currentStep]);
 
   useEffect(() => {
@@ -116,13 +180,27 @@ export default function Formulario() {
 
   const socialData = watch('social');
   const capData = watch('capacitacionData');
+  const watchEmpresa = watch('empresaMatriz');
+  const watchUnidad = watch('unidadMinera');
+  const watchTipoMinado = watch('tipoMinado');
+  const watchFechaInicio = watch('fechaInicio');
+  const watchVida = watch('vidaUtil');
+  const watchCapacidad = watch('capacidad');
 
   useEffect(() => {
     if (readOnly || loadingForm) return;
     const subscription = watch((values) => {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+      clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+        } catch { /* sin espacio */ }
+      }, 400);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(draftTimerRef.current);
+    };
   }, [watch, readOnly, loadingForm]);
 
   function fixArrays(val) {
@@ -430,12 +508,12 @@ export default function Formulario() {
                   <div key={step.id} className="relative z-10 flex flex-col items-center bg-transparent px-1 sm:px-4">
                     <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-all duration-150 text-[11px] sm:text-xs font-bold ${
                       isActive ? 'bg-guinda border-guinda text-white' : 
-                      isCompleted ? 'bg-white border-guinda text-guinda' : 'bg-white border-zinc-300 text-zinc-400'
+                      isCompleted ? 'bg-white border-guinda text-guinda' : 'bg-white border-zinc-300 text-zinc-500'
                     }`}>
                       {isCompleted ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" /> : step.id}
                     </div>
-                    <span className={`text-[9px] sm:text-[10px] font-semibold mt-2 text-center leading-tight ${
-                      isActive || isCompleted ? 'text-zinc-700' : 'text-zinc-400'
+                    <span className={`text-[11px] sm:text-xs font-semibold mt-2 text-center leading-tight ${
+                      isActive || isCompleted ? 'text-zinc-700' : 'text-zinc-600'
                     }`}>
                       {step.title}
                     </span>
@@ -446,7 +524,7 @@ export default function Formulario() {
           </div>
 
           {/* Formulario Core */}
-          <form onSubmit={handleSubmit(onSubmitForm)} className="flex-1 flex flex-col bg-white relative min-h-0">
+          <form onSubmit={handleSubmit(onSubmitForm)} autoComplete="off" className="flex-1 flex flex-col bg-white relative min-h-0">
             <div ref={formScrollRef} className="flex-1 overflow-y-auto px-6 sm:px-10 py-6 sm:py-8">
 
               {readOnly && (
@@ -477,7 +555,7 @@ export default function Formulario() {
                   <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
                 </div>
               ) : (
-              <fieldset disabled={readOnly} className="border-0 p-0 m-0 min-w-0">
+              <fieldset className={`border-0 p-0 m-0 min-w-0 ${readOnly ? 'form-readonly' : ''}`}>
 
               {/* ========================================================
                   PASO 1: DATOS GENERALES
@@ -485,7 +563,7 @@ export default function Formulario() {
               {currentStep === 1 && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-200">
                   <div className="border-b border-zinc-100 pb-4">
-                    <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">1. Información General</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">1. Información General</h2>
                     <p className="text-sm text-zinc-500 mt-1">Identificación de la unidad y capacidades operativas.</p>
                   </div>
                   
@@ -493,7 +571,7 @@ export default function Formulario() {
                     <div className="space-y-2 relative group">
                       <label htmlFor="empresaMatriz" className="text-sm font-medium text-zinc-700 flex items-center justify-between">
                         <span>Empresa Matriz o Empresa <HelpBtn text={HELP_TEXTS.empresaMatriz} /></span>
-                        <span className="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">Requerido</span>
+                        <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold bg-zinc-100 px-2 py-0.5 rounded-full">Requerido</span>
                       </label>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-guinda transition-colors duration-200" aria-hidden="true" />
@@ -501,21 +579,22 @@ export default function Formulario() {
                           id="empresaMatriz"
                           {...register('empresaMatriz', { required: 'El nombre de la empresa es obligatorio' })}
                           type="text" 
+                          readOnly={readOnly}
                           placeholder="Ej. Mining Inc."
                           aria-invalid={errors.empresaMatriz ? "true" : "false"}
-                          className={`w-full h-12 pl-10 pr-4 bg-white rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200 text-zinc-900 placeholder:text-zinc-400 shadow-sm ${errors.empresaMatriz ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 bg-red-50/30' : 'border-zinc-300 focus:ring-guinda/20 focus:border-guinda hover:border-zinc-400'}`}
+                          className={`w-full h-12 pl-10 pr-4 bg-white rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200 text-zinc-900 placeholder:text-zinc-500 shadow-sm ${errors.empresaMatriz ? 'border-red-500 focus:ring-red-500/20 focus:border-red-500 bg-red-50/30' : 'border-zinc-300 focus:ring-guinda/20 focus:border-guinda hover:border-zinc-400'}`}
                         />
                       </div>
                       {errors.empresaMatriz && (
-                        <p role="alert" className="text-xs text-red-500 font-medium flex items-center gap-1.5 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-200">
+                        <p role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1.5 animate-in slide-in-from-top-1 fade-in duration-200">
                           <AlertCircle className="w-3.5 h-3.5" /> {errors.empresaMatriz.message}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">País de Origen del Capital <HelpBtn text={HELP_TEXTS.paisOrigen} /></label>
-                      <select {...register("paisOrigen")} className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
+                      <label htmlFor="paisOrigen" className="text-sm font-medium text-zinc-700 inline-flex items-center">País de Origen del Capital <HelpBtn text={HELP_TEXTS.paisOrigen} /></label>
+                      <select id="paisOrigen" disabled={readOnly} {...register("paisOrigen")} className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
                         <option value="">Selecciona el país de origen</option>
                         {PAISES.map((pais) => (
                           <option key={pais} value={pais}>{pais}</option>
@@ -524,16 +603,16 @@ export default function Formulario() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Subsidiaria <HelpBtn text={HELP_TEXTS.subsidiaria} /></label>
-                      <input {...register("subsidiaria")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. Minera del Norte S.A." />
+                      <label htmlFor="subsidiaria" className="text-sm font-medium text-zinc-700 inline-flex items-center">Subsidiaria <HelpBtn text={HELP_TEXTS.subsidiaria} /></label>
+                      <input id="subsidiaria" readOnly={readOnly} {...register("subsidiaria")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-500" placeholder="Ej. Minera del Norte S.A." />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Unidad Minera <HelpBtn text={HELP_TEXTS.unidadMinera} /></label>
-                      <input {...register("unidadMinera")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. Unidad Fresnillo" />
+                      <label htmlFor="unidadMinera" className="text-sm font-medium text-zinc-700 inline-flex items-center">Unidad Minera <HelpBtn text={HELP_TEXTS.unidadMinera} /></label>
+                      <input id="unidadMinera" readOnly={readOnly} {...register("unidadMinera")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-500" placeholder="Ej. Unidad Fresnillo" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Tipo de Minado <HelpBtn text={HELP_TEXTS.tipoMinado} /></label>
-                      <select {...register("tipoMinado")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
+                      <label htmlFor="tipoMinado" className="text-sm font-medium text-zinc-700 inline-flex items-center">Tipo de Minado <HelpBtn text={HELP_TEXTS.tipoMinado} /></label>
+                      <select id="tipoMinado" disabled={readOnly} {...register("tipoMinado")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none bg-zinc-50 focus:bg-white transition-all text-zinc-700">
                         <option value="">Selecciona una opción</option>
                         <option value="Subterráneo">Subterráneo</option>
                         <option value="Superficial">Superficial</option>
@@ -541,16 +620,16 @@ export default function Formulario() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Fecha de Inicio de Operaciones <HelpBtn text={HELP_TEXTS.fechaInicio} /></label>
-                      <input type="date" {...register("fechaInicio")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-700" />
+                      <label htmlFor="fechaInicio" className="text-sm font-medium text-zinc-700 inline-flex items-center">Fecha de Inicio de Operaciones <HelpBtn text={HELP_TEXTS.fechaInicio} /></label>
+                      <input id="fechaInicio" type="date" readOnly={readOnly} {...register("fechaInicio")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-700" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Vida Útil Estimada (Años) <HelpBtn text={HELP_TEXTS.vidaUtil} /></label>
-                      <input type="number" min="0" {...register("vidaUtil")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. 20" />
+                      <label htmlFor="vidaUtil" className="text-sm font-medium text-zinc-700 inline-flex items-center">Vida Útil Estimada (Años) <HelpBtn text={HELP_TEXTS.vidaUtil} /></label>
+                      <input id="vidaUtil" type="number" min="0" readOnly={readOnly} {...register("vidaUtil")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-500" placeholder="Ej. 20" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700 inline-flex items-center">Capacidad del Procesamiento (t/día) <HelpBtn text={HELP_TEXTS.capacidad} /></label>
-                      <input type="number" min="0" {...register("capacidad")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-400" placeholder="Ej. 8000" />
+                      <label htmlFor="capacidad" className="text-sm font-medium text-zinc-700 inline-flex items-center">Capacidad del Procesamiento (t/día) <HelpBtn text={HELP_TEXTS.capacidad} /></label>
+                      <input id="capacidad" type="number" min="0" readOnly={readOnly} {...register("capacidad")} required className="w-full h-12 px-4 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-800 placeholder:text-zinc-500" placeholder="Ej. 8000" />
                     </div>
                   </div>
                 </div>
@@ -563,7 +642,7 @@ export default function Formulario() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4 shrink-0">
                     <div>
-                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Producción</h2>
+                      <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">2. Producción</h2>
                       <p className="text-sm text-zinc-500 mt-1">Volumen total extraído por año.</p>
                     </div>
                     <div className="text-xs font-medium text-amber-800 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 shadow-sm">
@@ -571,18 +650,18 @@ export default function Formulario() {
                     </div>
                   </div>
 
-                  <div className="border border-zinc-200 rounded-2xl shadow-sm">
+                  <div className="border border-zinc-200 rounded-2xl shadow-sm overflow-x-auto">
                     <div>
                       <table className="w-full text-base text-left">
                         <thead className="bg-zinc-50/80 border-b border-zinc-200 text-zinc-700">
                           <tr>
-                            <th className="px-4 py-4 sm:px-5 sm:py-5 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
+                            <th scope="col" className="px-4 py-4 sm:px-5 sm:py-5 font-semibold border-r border-zinc-200 bg-zinc-100/80 sticky left-0 z-20 backdrop-blur-sm">Año</th>
                             {METALS.map(metal => (
-                              <th key={metal.key} className="px-3 sm:px-4 py-4 sm:py-5 font-semibold text-right border-r border-zinc-200 last:border-0">
+                              <th scope="col" key={metal.key} className="px-3 sm:px-4 py-4 sm:py-5 font-semibold text-right border-r border-zinc-200 last:border-0">
                                 <span className="inline-flex items-center justify-end gap-1">
                                   {metal.label}
                                   <HelpBtn text={HELP_TEXTS[metal.key]} />
-                                  <span className="text-zinc-400 font-normal ml-0.5">({metal.unit})</span>
+                                  <span className="text-zinc-600 font-normal ml-0.5">({metal.unit})</span>
                                 </span>
                               </th>
                             ))}
@@ -600,9 +679,10 @@ export default function Formulario() {
                                     type="number"
                                     step="any"
                                     min="0"
+                                    readOnly={readOnly}
                                     aria-label={`Producción de ${metal.label} en ${year}`}
                                     {...register(`produccion.${year}.${metal.key}`)}
-                                    className="w-full min-h-[60px] sm:min-h-[64px] px-3 py-3 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 focus:z-10 relative transition-all placeholder:text-zinc-300 font-semibold text-zinc-900 text-sm sm:text-base"
+                                    className="w-full min-h-[60px] sm:min-h-[64px] px-3 py-3 text-right bg-transparent border-none outline-none focus:ring-2 focus:ring-guinda inset-0 focus:z-10 relative transition-all placeholder:text-zinc-500 font-semibold text-zinc-900 text-sm sm:text-base"
                                     placeholder="0"
                                   />
                                 </td>
@@ -626,7 +706,7 @@ export default function Formulario() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">3. Indicadores Ambientales y Sociales (ESG)</h2>
+                      <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">3. Indicadores Ambientales, Sociales y de Gobernanza (ESG)</h2>
                       <p className="text-sm text-zinc-500 mt-1">Registra las métricas por año y describe las acciones realizadas.</p>
                     </div>
                   </div>
@@ -647,7 +727,6 @@ export default function Formulario() {
                         <div key={metric.id} className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
                           <div className="p-4 bg-zinc-50 border-b border-zinc-100">
                             <h3 className="text-sm font-semibold text-zinc-900">{metric.fullTitle}</h3>
-                            <span className="text-xs text-zinc-500">Unidad: {metric.unit}</span>
                           </div>
                           <div className="p-4 space-y-3">
                             {YEARS_ESG.map(year => (
@@ -658,6 +737,8 @@ export default function Formulario() {
                                   step={esEntero ? '1' : 'any'}
                                   min="0"
                                   max={esPorcentaje ? '100' : undefined}
+                                  readOnly={readOnly}
+                                  aria-label={`${metric.fullTitle} ${year}`}
                                   onInput={(e) => {
                                     if (esPorcentaje && Number(e.target.value) > 100) {
                                       e.target.value = 100;
@@ -679,11 +760,13 @@ export default function Formulario() {
                               </div>
                             ))}
                             <div className="pt-2">
-                              <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2023-2026</label>
+                              <label className="text-xs font-medium text-zinc-600 mb-1 block" htmlFor={`esg-${metric.id}-comentarios`}>Acciones más importantes realizadas del periodo 2023-2026</label>
                               <textarea
+                                id={`esg-${metric.id}-comentarios`}
+                                readOnly={readOnly}
                                 {...register(`esg.${metric.id}.comentarios`)}
                                 rows={2}
-                                className="w-full p-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-800 placeholder:text-zinc-400 resize-none text-xs"
+                                className="w-full p-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-800 placeholder:text-zinc-500 resize-none text-xs"
                                 placeholder="Ej: Se implementaron programas de reducción de emisiones y reciclaje de agua."
                               />
                             </div>
@@ -702,7 +785,7 @@ export default function Formulario() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">4. Impacto Social y Empleo</h2>
+                      <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">4. Impacto Social y Empleo</h2>
                       <p className="text-sm text-zinc-500 mt-1">Registra el personal femenino y masculino. El total de empleados se calculará de forma automática.</p>
                     </div>
                   </div>
@@ -732,28 +815,32 @@ export default function Formulario() {
 
                                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                                   <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-zinc-600">Mujeres</label>
+                                    <label className="text-xs font-semibold text-zinc-600" htmlFor={`${category.id}-${year}-mujeres`}>Mujeres</label>
                                     <input
+                                      id={`${category.id}-${year}-mujeres`}
                                       type="number"
                                       step="1"
                                       min="0"
+                                      readOnly={readOnly}
                                       {...register(`social.${category.id}.${year}.mujeres`, {
                                         setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '')
                                       })}
-                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500"
                                       placeholder="0"
                                     />
                                   </div>
                                   <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-zinc-600">Hombres</label>
+                                    <label className="text-xs font-semibold text-zinc-600" htmlFor={`${category.id}-${year}-hombres`}>Hombres</label>
                                     <input
+                                      id={`${category.id}-${year}-hombres`}
                                       type="number"
                                       step="1"
                                       min="0"
+                                      readOnly={readOnly}
                                       {...register(`social.${category.id}.${year}.hombres`, {
                                         setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '')
                                       })}
-                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-300"
+                                      className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 focus:border-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500"
                                       placeholder="0"
                                     />
                                   </div>
@@ -802,7 +889,7 @@ export default function Formulario() {
                 <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">5. Capacitación y Rotación de Personal</h2>
+                      <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">5. Capacitación y Rotación de Personal</h2>
                       <p className="text-sm text-zinc-500 mt-1">Registra las horas de capacitación en seguridad y las tasas de rotación anual.</p>
                     </div>
                   </div>
@@ -829,12 +916,12 @@ export default function Formulario() {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-600">Mujeres (hrs)</label>
-                                <input type="number" step="1" min="0" {...register(`capacitacionData.capacitacion.${year}.mujeres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                                <label className="text-xs font-semibold text-zinc-600" htmlFor={`cap-${year}-mujeres`}>Mujeres (hrs)</label>
+                                <input id={`cap-${year}-mujeres`} type="number" step="1" min="0" readOnly={readOnly} {...register(`capacitacionData.capacitacion.${year}.mujeres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500" placeholder="0" />
                               </div>
                               <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-600">Hombres (hrs)</label>
-                                <input type="number" step="1" min="0" {...register(`capacitacionData.capacitacion.${year}.hombres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0" />
+                                <label className="text-xs font-semibold text-zinc-600" htmlFor={`cap-${year}-hombres`}>Hombres (hrs)</label>
+                                <input id={`cap-${year}-hombres`} type="number" step="1" min="0" readOnly={readOnly} {...register(`capacitacionData.capacitacion.${year}.hombres`, { setValueAs: (v) => v === '' || v === undefined || v === null ? '' : String(Math.floor(Number(v)) || '') })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500" placeholder="0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Total (hrs)</label>
@@ -867,12 +954,12 @@ export default function Formulario() {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-600">Mujeres (%)</label>
-                                <input type="number" step="any" min="0" max="100" {...register(`capacitacionData.rotacion.${year}.mujeres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
+                                <label className="text-xs font-semibold text-zinc-600" htmlFor={`rot-${year}-mujeres`}>Mujeres (%)</label>
+                                <input id={`rot-${year}-mujeres`} type="number" step="any" min="0" max="100" readOnly={readOnly} {...register(`capacitacionData.rotacion.${year}.mujeres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-guinda outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500" placeholder="0.0" />
                               </div>
                               <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-zinc-600">Hombres (%)</label>
-                                <input type="number" step="any" min="0" max="100" {...register(`capacitacionData.rotacion.${year}.hombres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900" placeholder="0.0" />
+                                <label className="text-xs font-semibold text-zinc-600" htmlFor={`rot-${year}-hombres`}>Hombres (%)</label>
+                                <input id={`rot-${year}-hombres`} type="number" step="any" min="0" max="100" readOnly={readOnly} {...register(`capacitacionData.rotacion.${year}.hombres`, { setValueAs: (v) => { if (v === '' || v === undefined || v === null) return ''; const n = Number(v); return isNaN(n) ? '' : String(Math.min(n, 100)); } })} className="w-full h-11 px-4 rounded-xl border border-zinc-200 focus:ring-2 focus:ring-zinc-900 outline-none transition-all bg-zinc-50 focus:bg-white text-zinc-900 placeholder:text-zinc-500" placeholder="0.0" />
                               </div>
                               <div className="space-y-1.5">
                                 <label className="text-xs font-semibold text-zinc-600">Total (%)</label>
@@ -892,7 +979,7 @@ export default function Formulario() {
               {currentStep === 6 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
                   <div className="border-b border-zinc-100 pb-4">
-                    <h2 className="text-2xl font-semibold text-zinc-900 tracking-tight">6. Revisión Final</h2>
+                    <h2 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-900 tracking-tight">6. Revisión Final</h2>
                     <p className="text-sm text-zinc-500 mt-1">Has completado todos los módulos. Verifica que la información esté lista para su envío oficial a SEFODECO.</p>
                   </div>
                   <div className="p-8 bg-zinc-50 border border-zinc-200 rounded-3xl text-center space-y-4 shadow-inner">
@@ -903,6 +990,19 @@ export default function Formulario() {
                     <p className="text-zinc-600 text-sm max-w-md mx-auto leading-relaxed">
                       Al presionar "Finalizar y Enviar Reporte", los datos serán procesados y guardados de manera segura. Asegúrate de que las métricas anuales sean correctas.
                     </p>
+                  </div>
+                  <div className="border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-100">
+                      <h3 className="text-sm font-semibold text-zinc-900">Resumen de la información capturada</h3>
+                    </div>
+                    <div className="divide-y divide-zinc-100">
+                      <SummaryRow label="Empresa" value={watchEmpresa} />
+                      <SummaryRow label="Unidad Minera" value={watchUnidad} />
+                      <SummaryRow label="Tipo de Minado" value={watchTipoMinado} />
+                      <SummaryRow label="Fecha de inicio de operaciones" value={watchFechaInicio} />
+                      <SummaryRow label="Vida útil estimada" value={watchVida ? `${watchVida} años` : ''} />
+                      <SummaryRow label="Capacidad de procesamiento" value={watchCapacidad ? `${watchCapacidad} t/día` : ''} />
+                    </div>
                   </div>
                   <label className="flex items-center justify-center gap-2.5 cursor-pointer pt-2">
                     <input
@@ -915,7 +1015,7 @@ export default function Formulario() {
                       He leído y acepto el{' '}
                       <button
                         type="button"
-                        onClick={() => setPrivacidadOpen(true)}
+                        onClick={openPrivacidad}
                         className="text-guinda underline underline-offset-2 hover:text-guinda-hover"
                       >
                         Aviso de Privacidad
@@ -932,7 +1032,7 @@ export default function Formulario() {
             <div className="flex-shrink-0 px-6 sm:px-10 py-3 border-t border-zinc-100">
               <button
                 type="button"
-                onClick={() => setPrivacidadOpen(true)}
+                onClick={openPrivacidad}
                 className="text-xs font-medium text-guinda hover:text-guinda-hover underline underline-offset-2 transition-colors"
               >
                 Aviso de Privacidad
@@ -942,13 +1042,22 @@ export default function Formulario() {
             {/* Modal de Aviso de Privacidad */}
             {privacidadOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPrivacidadOpen(false)} />
-                <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closePrivacidad} />
+                <div
+                  ref={privacidadDialogRef}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="privacidad-titulo"
+                  tabIndex={-1}
+                  onKeyDown={onPrivacidadKeyDown}
+                  className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                >
                   <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
-                    <h3 className="text-lg font-semibold text-zinc-900">Aviso de Privacidad</h3>
+                    <h3 id="privacidad-titulo" className="text-lg font-semibold text-zinc-900">Aviso de Privacidad</h3>
                     <button
                       type="button"
-                      onClick={() => setPrivacidadOpen(false)}
+                      onClick={closePrivacidad}
+                      aria-label="Cerrar Aviso de Privacidad"
                       className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 flex items-center justify-center transition-colors text-sm font-bold"
                     >
                       ×
@@ -983,7 +1092,7 @@ export default function Formulario() {
                   type="button"
                   onClick={handlePrevious}
                   disabled={currentStep === 1 || isSubmitting}
-                  className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-white border border-transparent hover:border-zinc-200 shadow-sm hover:shadow rounded-xl transition-all disabled:opacity-0 disabled:cursor-default"
+                  className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-white border border-zinc-200 hover:border-zinc-200 shadow-sm hover:shadow rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
@@ -995,14 +1104,14 @@ export default function Formulario() {
                     <button
                       type="button"
                       onClick={handleSaveFile}
-                      className="flex items-center px-4 py-2.5 text-sm font-medium text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 rounded-xl transition-all active:scale-95"
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 rounded-xl transition active:scale-95"
                     >
                       <Download className="w-4 h-4 mr-1.5" /> Guardar Archivo
                     </button>
                     <button
                       type="button"
                       onClick={handlePrint}
-                      className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-white bg-zinc-100 hover:bg-zinc-700 border border-zinc-200 hover:border-zinc-700 rounded-xl transition-all active:scale-95"
+                      className="flex items-center px-4 py-2.5 text-sm font-medium text-zinc-700 hover:text-white bg-zinc-100 hover:bg-zinc-700 border border-zinc-200 hover:border-zinc-700 rounded-xl transition active:scale-95"
                     >
                       <FileText className="w-4 h-4 mr-1.5" /> Imprimir
                     </button>
@@ -1011,7 +1120,7 @@ export default function Formulario() {
                 <button
                   type="submit"
                   disabled={isSubmitting || readOnly || (currentStep === STEPS.length && !aceptaPrivacidad)}
-                  className="flex items-center px-6 py-2.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition-all active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="flex items-center px-6 py-2.5 bg-guinda text-white text-sm font-semibold tracking-wide rounded-xl hover:bg-[#72112e] transition active:scale-[0.98] shadow-[0_4px_14px_rgba(138,21,56,0.39)] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {readOnly ? 'Reporte ya enviado' : currentStep === STEPS.length ? (
                     isSubmitting ? (

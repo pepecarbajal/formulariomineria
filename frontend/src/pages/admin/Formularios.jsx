@@ -247,10 +247,10 @@ function Produccion({ data, esAgregado }) {
         <table className="w-full text-sm text-left">
           <thead className="bg-zinc-50 border-b border-zinc-200">
             <tr>
-              <th className="px-4 py-3 font-semibold text-zinc-700">Año</th>
+              <th scope="col" className="px-4 py-3 font-semibold text-zinc-700">Año</th>
               {METALS.map((m) => (
-                <th key={m.key} className="px-4 py-3 font-semibold text-right text-zinc-700">
-                  {m.label} <span className="text-zinc-400 font-normal">({m.unit})</span>
+                <th key={m.key} scope="col" className="px-4 py-3 font-semibold text-right text-zinc-700">
+                  {m.label} <span className="text-zinc-500 font-normal">({m.unit})</span>
                 </th>
               ))}
             </tr>
@@ -281,7 +281,7 @@ function Produccion({ data, esAgregado }) {
 
 function ESGSeccion({ data, esAgregado }) {
   return (
-    <Seccion numero="3" titulo="Indicadores Ambientales y Sociales (ESG)" subtitulo="Métricas por año y acciones realizadas.">
+    <Seccion numero="3" titulo="Indicadores Ambientales, Sociales y de Gobernanza (ESG)" subtitulo="Métricas por año y acciones realizadas.">
       <div className="space-y-4">
         {ESG_METRICS.map((met) => {
           const esg = data.esg?.[met.id] || {};
@@ -295,7 +295,7 @@ function ESGSeccion({ data, esAgregado }) {
                   <thead className="bg-zinc-50">
                     <tr>
                       {YEARS_ESG.map((y) => (
-                        <th key={y} className="px-4 py-3 text-center font-semibold text-black border border-zinc-300">
+                        <th scope="col" key={y} className="px-4 py-3 text-center font-semibold text-black border border-zinc-300">
                           {y}{y === '2026' && <span className="text-guinda ml-0.5">*</span>}
                         </th>
                       ))}
@@ -321,8 +321,8 @@ function ESGSeccion({ data, esAgregado }) {
                     <table className="w-full text-base border-collapse">
                       <thead className="bg-zinc-50">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-black border border-zinc-300 w-48">Empresa</th>
-                          <th className="px-4 py-3 text-left font-semibold text-black border border-zinc-300">Acciones</th>
+                          <th scope="col" className="px-4 py-3 text-left font-semibold text-black border border-zinc-300 w-48">Empresa</th>
+                          <th scope="col" className="px-4 py-3 text-left font-semibold text-black border border-zinc-300">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -382,11 +382,11 @@ function SocialSeccion({ data, esAgregado }) {
                 <thead className="bg-zinc-50 border-b border-zinc-200">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold text-zinc-700">Año</th>
-                    <th className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
-                    <th className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
-                    <th className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
-                    <th className="px-4 py-3 text-right font-semibold text-zinc-700">% Mujeres</th>
-                    <th className="px-4 py-3 text-right font-semibold text-zinc-700">% Hombres</th>
+                    <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
+                    <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
+                    <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
+                    <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">% Mujeres</th>
+                    <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">% Hombres</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -436,9 +436,9 @@ function CapacitacionSeccion({ data, esAgregado }) {
               <thead className="bg-zinc-50 border-b border-zinc-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-zinc-700">Año</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -473,9 +473,9 @@ function CapacitacionSeccion({ data, esAgregado }) {
               <thead className="bg-zinc-50 border-b border-zinc-200">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-zinc-700">Año</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
-                  <th className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Mujeres</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Hombres</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold text-zinc-700">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -552,7 +552,7 @@ function generarHTMLInforme(data, titulo, esAgregado, companias, formas) {
   });
   content += `</table>`;
 
-  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales y Sociales (ESG)</h2>`;
+  content += `<h2 style="font-size:15px;color:#8A1538;margin:18px 0 8px;">3. Indicadores Ambientales, Sociales y de Gobernanza (ESG)</h2>`;
   ESG_METRICS.forEach((met) => {
     const esg = data.esg?.[met.id] || {};
     content += `<h3 style="font-size:13px;color:#000;margin:12px 0 6px;">${esc(met.fullTitle)}</h3>
@@ -730,21 +730,21 @@ export default function AdminFormularios() {
               value={seleccion}
               onChange={(e) => setSeleccion(e.target.value)}
               aria-label="Seleccionar empresa"
-              className="w-full h-11 pl-4 pr-10 rounded-xl border border-zinc-300 bg-white focus:outline-none focus:ring-2 focus:ring-guinda focus:border-guinda transition-all text-sm text-zinc-800 appearance-none cursor-pointer shadow-sm"
+              className="w-full h-11 pl-4 pr-10 rounded-xl border border-zinc-300 bg-white focus:outline-none focus:ring-2 focus:ring-guinda focus:border-guinda transition text-sm text-zinc-800 appearance-none cursor-pointer shadow-sm"
             >
               <option value="todas">Todas las empresas (totales agregados)</option>
               {empresas.map((u) => (
                 <option key={u.username} value={u.username}>{u.empresa}</option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">▼</span>
+            <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">▼</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleImprimir}
               disabled={!data}
-              className="h-11 px-4 bg-zinc-900 hover:bg-black text-white rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-11 px-4 bg-zinc-900 hover:bg-black text-white rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Imprimir el informe completo"
             >
               <Printer className="w-4 h-4" />
@@ -752,7 +752,7 @@ export default function AdminFormularios() {
             </button>
             <button
               onClick={handleExcel}
-              className="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"
+              className="h-11 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2 active:scale-95"
               title="Descargar reportes en Excel (una hoja por sección)"
             >
               <FileSpreadsheet className="w-4 h-4" />

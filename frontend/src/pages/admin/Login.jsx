@@ -52,8 +52,8 @@ export default function AdminLogin() {
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-zinc-200 tracking-wide">Correo</label>
           <input 
-            id="email" name="email" type="email" required 
-            className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
+            id="email" name="email" type="email" required autoComplete="email"
+            className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition bg-white/5 text-white placeholder:text-white/60 shadow-inner"
             placeholder="ejemplo@guerrero.gob.mx"
           />
         </div>
@@ -62,8 +62,8 @@ export default function AdminLogin() {
           <label htmlFor="password" className="text-sm font-medium text-zinc-200 tracking-wide">Contraseña</label>
           <div className="relative">
             <input 
-              id="password" name="password" type={showPassword ? 'text' : 'password'} required 
-              className="w-full h-12 pl-4 pr-12 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
+              id="password" name="password" type={showPassword ? 'text' : 'password'} required autoComplete="current-password"
+              className="w-full h-12 pl-4 pr-12 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition bg-white/5 text-white placeholder:text-white/60 shadow-inner"
               placeholder="••••••••"
             />
             <button
@@ -79,14 +79,14 @@ export default function AdminLogin() {
 
         <button 
           type="submit" disabled={loading}
-          className="w-full h-12 mt-4 bg-zinc-900 hover:bg-black text-white rounded-xl font-medium tracking-wide transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center border border-zinc-700 shadow-[0_0_20px_rgba(0,0,0,0.4)]"
+          className="w-full h-12 mt-4 bg-zinc-900 hover:bg-black text-white rounded-xl font-medium tracking-wide transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center border border-zinc-700 shadow-[0_0_20px_rgba(0,0,0,0.4)]"
         >
           {loading ? <Spinner /> : 'Ingresar al panel'}
         </button>
       </form>
 
       <div className="mt-8 pt-6 border-t border-white/10 flex justify-center">
-        <Link to="/" className="inline-flex items-center text-xs font-medium text-zinc-400 hover:text-white tracking-wide transition-colors group">
+        <Link to="/" className="inline-flex items-center text-xs font-medium text-zinc-300 hover:text-white tracking-wide transition-colors group">
           <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" /> 
           ¿Eres un usuario? Volver
         </Link>

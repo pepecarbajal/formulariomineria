@@ -9,6 +9,7 @@ export default function AdminUsuarios() {
   const [loadingData, setLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [eliminarUser, setEliminarUser] = useState(null);
   const { register, handleSubmit, reset } = useForm();
 
   useEffect(() => {
@@ -40,15 +41,20 @@ export default function AdminUsuarios() {
     }
   };
 
-  const handleDelete = async (username) => {
-    if (!window.confirm(`¿Seguro de eliminar el acceso para ${username}?`)) return;
-    
+  const handleDelete = (username) => {
+    setEliminarUser(username);
+  };
+
+  const confirmarDelete = async () => {
+    if (!eliminarUser) return;
     try {
-      await request(`/usuarios/${username}`, { method: 'DELETE' });
+      await request(`/usuarios/${eliminarUser}`, { method: 'DELETE' });
       await fetchUsuarios();
       toast.success('Acceso revocado');
     } catch (error) {
       toast.error('Error al eliminar');
+    } finally {
+      setEliminarUser(null);
     }
   };
 
@@ -112,36 +118,41 @@ export default function AdminUsuarios() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-zinc-700">Razón Social</label>
+              <label htmlFor="empresa-nueva" className="text-sm font-semibold text-zinc-700">Razón Social</label>
               <div className="relative group">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400 group-focus-within:text-[#8A1538] transition-colors" />
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 group-focus-within:text-[#8A1538] transition-colors" />
                 <input 
+                  id="empresa-nueva"
+                  autoComplete="organization"
                   {...register('empresa')} required
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition-all text-sm bg-zinc-50 focus:bg-white"
+                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition text-sm bg-zinc-50 focus:bg-white"
                   placeholder="Ej. Minera Media Luna"
                 />
               </div>
             </div>
             
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-zinc-700">Nombre de Usuario</label>
+              <label htmlFor="username-nuevo" className="text-sm font-semibold text-zinc-700">Nombre de Usuario</label>
               <div className="relative group">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400 group-focus-within:text-[#8A1538] transition-colors" />
+                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 group-focus-within:text-[#8A1538] transition-colors" />
                 <input 
+                  id="username-nuevo"
+                  autoComplete="off"
                   {...register('username')} required
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition-all text-sm bg-zinc-50 focus:bg-white"
+                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition text-sm bg-zinc-50 focus:bg-white"
                   placeholder="Identificador único"
                 />
               </div>
             </div>
             
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-zinc-700">Contraseña Temporal</label>
+              <label htmlFor="password-nuevo" className="text-sm font-semibold text-zinc-700">Contraseña Temporal</label>
               <div className="relative group">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400 group-focus-within:text-[#8A1538] transition-colors" />
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 group-focus-within:text-[#8A1538] transition-colors" />
                 <input 
-                  type="password" {...register('password')} required
-                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition-all text-sm bg-zinc-50 focus:bg-white"
+                  id="password-nuevo"
+                  type="password" autoComplete="new-password" {...register('password')} required
+                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-300 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition text-sm bg-zinc-50 focus:bg-white"
                   placeholder="Generar clave segura"
                 />
               </div>
@@ -150,7 +161,7 @@ export default function AdminUsuarios() {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full h-11 mt-2 bg-[#8A1538] hover:bg-[#6b102b] text-white rounded-xl text-sm font-semibold transition-all active:scale-[0.98] shadow-md shadow-[#8A1538]/20 disabled:opacity-70 flex items-center justify-center gap-2"
+              className="w-full h-11 mt-2 bg-[#8A1538] hover:bg-[#6b102b] text-white rounded-xl text-sm font-semibold transition active:scale-[0.98] shadow-md shadow-[#8A1538]/20 disabled:opacity-70 flex items-center justify-center gap-2"
             >
               {isSubmitting ? 'Registrando...' : 'Generar Credenciales'}
             </button>
@@ -167,20 +178,22 @@ export default function AdminUsuarios() {
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               {/* Buscador */}
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
                 <input
+                  id="buscar-empresa"
                   type="text"
+                  aria-label="Buscar empresa o usuario"
                   placeholder="Buscar empresa..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-10 pl-9 pr-4 rounded-lg border border-zinc-200 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition-all text-sm bg-white shadow-sm"
+                  className="w-full h-10 pl-9 pr-4 rounded-lg border border-zinc-200 focus:border-[#8A1538] focus:ring-4 focus:ring-[#8A1538]/10 outline-none transition text-sm bg-white shadow-sm"
                 />
               </div>
               
               {/* Botón Exportar Excel */}
               <button
                 onClick={handleExportExcel}
-                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 w-full sm:w-auto"
+                className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition shadow-sm flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 w-full sm:w-auto"
                 title="Descargar directorio en formato Excel"
               >
                 <FileSpreadsheet className="w-4 h-4" />
@@ -196,7 +209,7 @@ export default function AdminUsuarios() {
                 <div className="w-8 h-8 border-2 border-zinc-200 border-t-[#8A1538] rounded-full animate-spin" />
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="flex flex-col justify-center items-center h-64 text-zinc-400">
+              <div className="flex flex-col justify-center items-center h-64 text-zinc-500">
                 <Building2 className="w-12 h-12 mb-3 text-zinc-200" strokeWidth={1} />
                 <p className="text-sm font-medium text-zinc-500">No se encontraron empresas registradas.</p>
               </div>
@@ -204,9 +217,9 @@ export default function AdminUsuarios() {
               <table className="w-full text-sm text-left whitespace-nowrap">
                 <thead className="text-xs text-zinc-500 uppercase font-bold tracking-wider bg-zinc-50/80 border-b border-zinc-100">
                   <tr>
-                    <th className="px-6 py-4">Razón Social</th>
-                    <th className="px-6 py-4">Usuario de Acceso</th>
-                    <th className="px-6 py-4 text-right">Acciones</th>
+                    <th scope="col" className="px-6 py-4">Razón Social</th>
+                    <th scope="col" className="px-6 py-4">Usuario de Acceso</th>
+                    <th scope="col" className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
@@ -223,7 +236,7 @@ export default function AdminUsuarios() {
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDelete(user.username)}
-                          className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                          className="p-2 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500/20"
                           title="Revocar Acceso"
                           aria-label={`Eliminar a ${user.empresa}`}
                         >
@@ -238,6 +251,50 @@ export default function AdminUsuarios() {
           </div>
         </div>
       </div>
+
+      {eliminarUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEliminarUser(null)} />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="eliminar-titulo"
+            aria-describedby="eliminar-desc"
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+              <h3 id="eliminar-titulo" className="text-lg font-semibold text-zinc-900">Revocar acceso</h3>
+              <button
+                type="button"
+                onClick={() => setEliminarUser(null)}
+                aria-label="Cancelar"
+                className="w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 flex items-center justify-center transition text-sm font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="px-6 py-4 text-sm text-zinc-600 leading-relaxed" id="eliminar-desc">
+              ¿Seguro de eliminar el acceso para <strong className="text-zinc-900">{eliminarUser}</strong>? Esta acción no se puede deshacer.
+            </div>
+            <div className="px-6 py-4 border-t border-zinc-200 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEliminarUser(null)}
+                className="px-4 py-2 text-sm font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarDelete}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition"
+              >
+                Sí, revocar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

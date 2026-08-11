@@ -56,8 +56,8 @@ const handleLogin = async (e) => {
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-zinc-200 tracking-wide">Usuario</label>
           <input 
-            id="email" name="email" type="text" required 
-            className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-guinda transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
+            id="email" name="email" type="text" required autoComplete="username"
+            className="w-full h-12 px-4 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-guinda transition bg-white/5 text-white placeholder:text-white/60 shadow-inner"
             placeholder="Identificador de la empresa"
           />
         </div>
@@ -66,8 +66,8 @@ const handleLogin = async (e) => {
           <label htmlFor="password" className="text-sm font-medium text-zinc-200 tracking-wide">Contraseña</label>
           <div className="relative">
             <input 
-              id="password" name="password" type={showPassword ? 'text' : 'password'} required 
-              className="w-full h-12 pl-4 pr-12 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-guinda transition-all bg-white/5 text-white placeholder:text-white/40 shadow-inner"
+              id="password" name="password" type={showPassword ? 'text' : 'password'} required autoComplete="current-password"
+              className="w-full h-12 pl-4 pr-12 rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-guinda transition bg-white/5 text-white placeholder:text-white/60 shadow-inner"
               placeholder="••••••••"
             />
             <button
@@ -83,14 +83,14 @@ const handleLogin = async (e) => {
 
         <button 
           type="submit" disabled={loading}
-          className="w-full h-12 mt-4 bg-guinda hover:bg-[#72112e] text-white rounded-xl font-medium tracking-wide transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_20px_rgba(138,21,56,0.4)]"
+          className="w-full h-12 mt-4 bg-guinda hover:bg-[#72112e] text-white rounded-xl font-medium tracking-wide transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_20px_rgba(138,21,56,0.4)]"
         >
           {loading ? <Spinner /> : 'Iniciar Sesión'}
         </button>
       </form>
 
       <div className="mt-8 pt-6 border-t border-white/10 flex justify-center">
-        <Link to="/admin/login" className="inline-flex items-center text-xs font-medium text-zinc-400 hover:text-white tracking-wide transition-colors group">
+        <Link to="/admin/login" className="inline-flex items-center text-xs font-medium text-zinc-300 hover:text-white tracking-wide transition-colors group">
           ¿Eres administrador? Acceso interno 
           <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
         </Link>

@@ -33,13 +33,13 @@ export default function AdminLayout() {
                 key={link.name}
                 to={link.path}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition duration-200 group ${
                   isActive 
                     ? 'bg-guinda/10 text-guinda' 
                     : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900'
                 }`}
               >
-                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-guinda' : 'text-zinc-400 group-hover:text-zinc-600'}`} />
+                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-guinda' : 'text-zinc-500 group-hover:text-zinc-700'}`} />
                 {link.name}
               </Link>
             );
@@ -68,7 +68,8 @@ export default function AdminLayout() {
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
             aria-expanded={isMobileMenuOpen}
-            aria-label="Abrir menú de navegación"
+            aria-controls="menu-movil"
+            aria-label={isMobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
             className="p-2 text-zinc-600 rounded-lg hover:bg-zinc-100 transition-colors active:scale-95"
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -77,7 +78,7 @@ export default function AdminLayout() {
 
         {/* Menú Móvil (Overlay) */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden fixed inset-0 z-20 bg-white pt-16 flex flex-col animate-in fade-in slide-in-from-top-4 duration-200">
+          <div id="menu-movil" className="lg:hidden fixed inset-0 z-20 bg-white pt-16 flex flex-col animate-in fade-in slide-in-from-top-4 duration-200">
             <nav className="p-4 space-y-2 flex-1">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
@@ -90,7 +91,7 @@ export default function AdminLayout() {
                       isActive ? 'bg-guinda/10 text-guinda' : 'text-zinc-600 hover:bg-zinc-50'
                     }`}
                   >
-                    <link.icon className={`w-5 h-5 ${isActive ? 'text-guinda' : 'text-zinc-400'}`} /> 
+                    <link.icon className={`w-5 h-5 ${isActive ? 'text-guinda' : 'text-zinc-500'}`} /> 
                     {link.name}
                   </Link>
                 );
