@@ -279,23 +279,6 @@ function Produccion({ data, esAgregado }) {
   );
 }
 
-function ComentariosEmpresa({ lista }) {
-  if (!lista || lista.length === 0) return null;
-  return (
-    <div className="w-full min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-800 text-sm space-y-2">
-      {lista.map((item) => (
-        <p key={item.nombre} className="flex items-start gap-2">
-          <span className="inline-flex items-center gap-1.5 font-semibold shrink-0">
-            <span className={`w-2.5 h-2.5 rounded-full inline-block ${COLORES_EMPRESA[colorEmpresa(item.nombre)]}`} />
-            <span className="font-semibold text-zinc-800">{item.nombre}:</span>
-          </span>
-          <span className="break-words whitespace-pre-wrap flex-1">{item.texto}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 function ESGSeccion({ data, esAgregado }) {
   return (
     <Seccion numero="3" titulo="Indicadores Ambientales y Sociales (ESG)" subtitulo="Métricas por año y acciones realizadas.">
@@ -304,30 +287,77 @@ function ESGSeccion({ data, esAgregado }) {
           const esg = data.esg?.[met.id] || {};
           return (
             <div key={met.id} className="rounded-2xl border border-zinc-200 overflow-hidden">
-              <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between gap-3">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h3 className="text-sm font-semibold text-zinc-900">{met.fullTitle}</h3>
-                  <span className="text-xs text-zinc-500">Unidad: {met.unit}</span>
+              <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100">
+                <h3 className="text-base font-semibold text-black">{met.fullTitle}</h3>
+              </div>
+              <div className="border-t border-zinc-200 overflow-x-auto">
+                <table className="w-full text-base border-collapse">
+                  <thead className="bg-zinc-50">
+                    <tr>
+                      {YEARS_ESG.map((y) => (
+                        <th key={y} className="px-4 py-3 text-center font-semibold text-black border border-zinc-300">
+                          {y}{y === '2026' && <span className="text-guinda ml-0.5">*</span>}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {YEARS_ESG.map((y) => (
+                        <td key={y} className="px-4 py-3 text-center text-black font-semibold border border-zinc-300">
+                          {esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t border-zinc-200">
+                <div className="px-5 py-3 bg-zinc-50 border-b border-zinc-100">
+                  <h3 className="text-base font-semibold text-black">Acciones más importantes realizadas del periodo 2023-2026</h3>
                 </div>
-                {esAgregado && <Leyenda tipo={esPorcentajeESG(met.id) ? 'promedio' : 'acumulado'} />}
-              </div>
-              <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {YEARS_ESG.map((y) => (
-                  <div key={y} className="flex items-center justify-between gap-2 bg-white rounded-xl border border-zinc-200 px-4 py-3">
-                    <span className="text-xs font-medium text-zinc-500">{y}</span>
-                    <span className="text-sm font-semibold text-zinc-900">
-                      {esg[y] ? `${esg[y]}${UNIT_MAP[met.id] || ''}` : '—'}
-                    </span>
+                <div className="p-5">
+                  <div className="border border-zinc-300 rounded-xl overflow-hidden">
+                    <table className="w-full text-base border-collapse">
+                      <thead className="bg-zinc-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-black border border-zinc-300 w-48">Empresa</th>
+                          <th className="px-4 py-3 text-left font-semibold text-black border border-zinc-300">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(esAgregado && esg.comentariosLista && esg.comentariosLista.length > 0
+                          ? esg.comentariosLista
+                          : esg.comentarios
+                            ? [{ nombre: data?.empresa || data?.username || 'Empresa', texto: esg.comentarios }]
+                            : []
+                        ).filter((i) => i.texto && String(i.texto).trim()).map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 text-left text-black font-medium border border-zinc-300">
+                              <span className="inline-flex items-center gap-2">
+                                <span className={`w-2.5 h-2.5 rounded-full inline-block ${COLORES_EMPRESA[colorEmpresa(item.nombre)]}`} />
+                                {item.nombre}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-left text-black border border-zinc-300 break-words whitespace-pre-wrap">
+                              {item.texto}
+                            </td>
+                          </tr>
+                        ))}
+                        {(esAgregado && esg.comentariosLista && esg.comentariosLista.length > 0
+                          ? esg.comentariosLista
+                          : esg.comentarios
+                            ? [{ nombre: data?.empresa || data?.username || 'Empresa', texto: esg.comentarios }]
+                            : []
+                        ).filter((i) => i.texto && String(i.texto).trim()).length === 0 && (
+                          <tr>
+                            <td colSpan={2} className="px-4 py-3 text-center text-black border border-zinc-300">—</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
-              <div className="px-5 pb-5">
-                <label className="text-xs font-medium text-zinc-600 mb-1 block">Acciones más importantes realizadas del periodo 2023-2026</label>
-                {esAgregado && esg.comentariosLista && esg.comentariosLista.length > 0 ? (
-                  <ComentariosEmpresa lista={esg.comentariosLista} />
-                ) : (
-                  <Valor value={esg.comentarios} className="min-h-[44px]" />
-                )}
+                </div>
               </div>
             </div>
           );
