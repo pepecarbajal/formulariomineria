@@ -729,38 +729,57 @@ export default function Formulario() {
                             <h3 className="text-sm font-semibold text-zinc-900">{metric.fullTitle}</h3>
                           </div>
                           <div className="p-4 space-y-3">
-                            {YEARS_ESG.map(year => (
-                              <div key={year} className="flex items-center gap-3">
-                                <label className="text-xs font-medium text-zinc-600 w-16 shrink-0">{year}</label>
-                                <input
-                                  type="number"
-                                  step={esEntero ? '1' : 'any'}
-                                  min="0"
-                                  max={esPorcentaje ? '100' : undefined}
-                                  readOnly={readOnly}
-                                  aria-label={`${metric.fullTitle} ${year}`}
-                                  onInput={(e) => {
-                                    if (esPorcentaje && Number(e.target.value) > 100) {
-                                      e.target.value = 100;
-                                    }
-                                  }}
-                                  {...register(`esg.${metric.id}.${year}`, {
-                                    setValueAs: (v) => {
-                                      if (v === '' || v === undefined || v === null) return '';
-                                      const n = Number(v);
-                                      if (isNaN(n)) return '';
-                                      if (esPorcentaje) return String(Math.min(n, 100));
-                                      if (esEntero) return String(Math.floor(n));
-                                      return String(n);
-                                    }
-                                  })}
-                                  className="flex-1 h-10 px-3 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-900 text-center text-sm"
-                                  placeholder={ejemplos[metric.id]?.[year] || '0'}
-                                />
-                              </div>
-                            ))}
-                            <div className="pt-2">
-                              <label className="text-xs font-medium text-zinc-600 mb-1 block" htmlFor={`esg-${metric.id}-comentarios`}>Mencione las acciones más importantes realizadas del periodo 2023-2026</label>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border-collapse">
+                                <thead>
+                                  <tr>
+                                    {YEARS_ESG.map(year => (
+                                      <th key={year} scope="col" className="px-4 py-2.5 text-center font-semibold text-black border border-zinc-200 bg-zinc-50">
+                                        {year}{year === '2026' && <span className="text-guinda ml-0.5">*</span>}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    {YEARS_ESG.map(year => (
+                                      <td key={year} className="px-2 py-2.5 text-center border border-zinc-200">
+                                        <input
+                                          type="number"
+                                          step={esEntero ? '1' : 'any'}
+                                          min="0"
+                                          max={esPorcentaje ? '100' : undefined}
+                                          readOnly={readOnly}
+                                          aria-label={`${metric.fullTitle} ${year}`}
+                                          onInput={(e) => {
+                                            if (esPorcentaje && Number(e.target.value) > 100) {
+                                              e.target.value = 100;
+                                            }
+                                          }}
+                                          {...register(`esg.${metric.id}.${year}`, {
+                                            setValueAs: (v) => {
+                                              if (v === '' || v === undefined || v === null) return '';
+                                              const n = Number(v);
+                                              if (isNaN(n)) return '';
+                                              if (esPorcentaje) return String(Math.min(n, 100));
+                                              if (esEntero) return String(Math.floor(n));
+                                              return String(n);
+                                            }
+                                          })}
+                                          className="w-full h-10 px-2 rounded-lg border border-zinc-200 focus:ring-2 focus:ring-guinda focus:border-guinda outline-none transition-all bg-white text-zinc-900 text-center text-base"
+                                          placeholder={ejemplos[metric.id]?.[year] || '0'}
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div className="text-sm text-zinc-900">
+                              <span className="text-guinda">*</span> Proyectado
+                            </div>
+                            <div className="pt-1">
+                              <label className="text-sm font-medium text-zinc-900 mb-1 block" htmlFor={`esg-${metric.id}-comentarios`}>Mencione las acciones más importantes realizadas del periodo 2023-2026</label>
                               <textarea
                                 id={`esg-${metric.id}-comentarios`}
                                 readOnly={readOnly}
