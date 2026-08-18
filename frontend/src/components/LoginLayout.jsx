@@ -11,8 +11,6 @@ export default function LoginLayout({ children }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (media.matches) return undefined;
     const interval = setInterval(() => {
       setIndex(prev => (prev + 1) % CAROUSEL_IMAGES.length);
     }, 4000);
@@ -27,7 +25,7 @@ export default function LoginLayout({ children }) {
         {CAROUSEL_IMAGES.map((src, i) => (
           <div
             key={src}
-            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-[1100ms] ease-in-out ${i === index ? 'carousel-zoom' : ''}`}
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-[1100ms] ease-in-out carousel-zoom"
             style={{
               backgroundImage: `url('${src}')`,
               opacity: i === index ? 1 : 0,
